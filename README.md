@@ -3,7 +3,9 @@
 `Banner_Payment_Master_Template.xlsx` is ready to use. It already contains Banner's catalogue and the
 sample orders for 19/10/2026, so you can see it working straight away.
 
-**Sample result for 19/10/2026: 386 order lines → Goods £9,266.68 + Postage £416.50 (119 lines) = Grand Total £9,683.18**
+**Sample result for 19/10/2026: 386 order lines → Goods £9,266.68 + Postage £416.50 (119 lines) = Grand Total £9,683.18** (at the prices before 21/10/2026)
+
+**Price update 21/10/2026:** Banner's "Sim Price Increases - October 26" file is applied. For the 42,726 codes it lists, Price Web is now Banner's New Price (+20%), rounded to the penny. It also added 4,835 codes that were only in that file. Catalogue column N keeps the previous price and column O notes the change. The same 19/10 orders at the new prices come to **£11,530.29** (Goods £11,250.29 + Postage £280.00 on 80 lines).
 
 ---
 

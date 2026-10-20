@@ -23,9 +23,10 @@ The user sends a Banner orders CSV each day and wants the total to pay Banner.
 4. Send the user the per-line breakdown CSV (SendUserFile) so they can attach it to their payment or check any line.
 
 ## When Banner sends a new catalogue (and the user wants it kept)
-Replace the `Catalogue` tab of `Banner_Payment_Master_Template.xlsx` with the new `Full File ` sheet. Keep the column layout: code in A, Price Web in K. Then recalculate with the xlsx skill's `recalc.py`, check that the total for a known orders file still makes sense, and commit and push.
+Replace the `Catalogue` tab of `Banner_Payment_Master_Template.xlsx` with the new `Full File ` sheet. Keep the column layout: code in A, Price Web in K. For a price-increase file (code / description / Price / New Price), update Price Web (K) for each listed code to New Price rounded to the penny, keep the old price in column N with a note in column O, and append any codes not yet in the catalogue. Then recalculate with the xlsx skill's `recalc.py`, check that the total for a known orders file still makes sense, and commit and push.
 
 ## Notes
 - The order export drops leading zeros from product codes (e.g. `61322` is catalogue `061322`). The script retries each unmatched code with 1–3 leading zeros added.
 - The catalogue also has a `New Price ` column (L). The user chose Price Web (K). Use L only if the user asks.
-- Reference result: the 19/10/2026 file (386 lines) gives Goods £9,266.68 + Postage £416.50 = **£9,683.18**.
+- Price history: from 21/10/2026 the Catalogue uses Banner's "Sim Price Increases - October 26" New Price, rounded to the penny, for 42,726 codes. It also adds 4,835 codes that were only in that file. Catalogue column N holds the previous Price Web and column O notes the change. To price orders from before 21/10, run the script with `--catalogue` pointing at the template from git history (commit 5b6758f or earlier).
+- Reference results for the 19/10/2026 file (386 lines): old prices £9,683.18; prices from 21/10/2026 £11,530.29 (Goods £11,250.29 + Postage £280.00).
