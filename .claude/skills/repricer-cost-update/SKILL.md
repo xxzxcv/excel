@@ -31,7 +31,8 @@ description: Update Amazon repricer unit costs from a Banner/Sim price-increase 
 3. Report the status counts and anything in Review that needs a decision.
 
 ## Notes
-- The October 2026 Sim file's New Price is exactly Price x 1.2 for every code. Before 21/10/2026 the repricer
+- The October 2026 Sim file's New Price is exactly Price x 1.2 for every code. The user confirmed this is Banner's
+  flat 20% increase and both columns are ex VAT, so VAT is still added on top. Before 21/10/2026 the repricer
   held costs ex VAT (cost = old Price x pack quantity). The user asked for costs inc VAT from this update on.
 - `--vat 0` gives ex-VAT costs. `--catalogue` (default: the master template) only labels Banner SKUs that have
   no increase listed.
