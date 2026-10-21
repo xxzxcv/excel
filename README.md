@@ -117,6 +117,7 @@ sheet whenever today's file is shorter.
 ## Repricer cost update (Banner/Sim price files)
 
 `.claude/skills/repricer-cost-update/repricer_cost_update.py` turns a Banner/Sim price-increase file into a repricer
-upload. New cost = round(New Price ex VAT × pack quantity × 1.20, 2). Only SKUs Sellerboard labels `#BANNER` are
+upload. New cost = round(New Price ex VAT × pack quantity, 2), kept ex VAT because the repricer adds VAT
+through its `vat_rate` column. Only SKUs Sellerboard labels `#BANNER` are
 updated, and `#InHouse` SKUs are never touched. Anything uncertain goes to the **Review** sheet of
 `Supplier_Price_Analysis.xlsx` instead of the upload. See the skill's `SKILL.md` for the SKU formats it accepts.

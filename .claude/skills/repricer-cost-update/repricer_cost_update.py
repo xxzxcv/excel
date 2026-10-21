@@ -3,6 +3,7 @@
 
 Rules:
   new cost = round(Supplier New Price ex VAT * pack multiplier * (1 + VAT), 2)   (half-up, to the penny)
+  VAT defaults to 0: the repricer applies VAT itself through its vat_rate column, so costs stay ex VAT.
   Only rows Sellerboard labels '#BANNER' are updated. '#InHouse' rows are never touched, even when their
   SKU contains a Banner code. Anything uncertain goes to the Review sheet instead of the upload file.
 
@@ -13,7 +14,7 @@ SKU grammar accepted for an automatic update (case-insensitive, after dropping t
   CODE NX / CODE N BOXES / CODE PRIME NX / CODE NX PRIME  multipack suffix
 
 Usage: repricer_cost_update.py REPRICER.csv SIM.xlsx SELLERBOARD.xlsx --out DIR
-         [--catalogue Banner_Payment_Master_Template.xlsx] [--vat 0.20]
+         [--catalogue Banner_Payment_Master_Template.xlsx] [--vat 0] [--approve-review]
 """
 import argparse, os, re, sys
 from decimal import Decimal, ROUND_HALF_UP
@@ -129,7 +130,9 @@ def main():
     ap.add_argument("sim")
     ap.add_argument("sellerboard")
     ap.add_argument("--catalogue", default=DEFAULT_CATALOGUE)
-    ap.add_argument("--vat", default="0.20")
+    ap.add_argument("--vat", default="0")
+    ap.add_argument("--approve-review", action="store_true",
+                    help="also upload Review rows that have a supplier code (pack quantity 1 if the SKU format is unrecognised)")
     ap.add_argument("--out", default=".")
     a = ap.parse_args()
     vat = Decimal(a.vat)
@@ -149,6 +152,9 @@ def main():
         rec = {"Amazon_SKU": sku, "Merchant_ID": row["merchant_id"], "ASIN": row["asin"], "Title": row["title"],
                "Sellerboard_Label": label, "Base_Supplier_SKU": code or "", "Match_Rule": how,
                "Pack_Quantity": mult or "", "Old_Repricer_Cost": float(cur)}
+        loose = None if code else loose_code(sku, codes)
+        if not code and loose and label != "INHOUSE":
+            code, mult = loose, 1
         if code:
             desc, old, new = sim[code]
             new_ex = money(new * mult)
@@ -157,28 +163,30 @@ def main():
             ratio = float(cur / expected_old) if cur > 0 else None
             rec.update({"Supplier_Description": desc, "Supplier_Old_Price_Ex_VAT": float(old),
                         "Supplier_New_Price_Ex_VAT": float(new), "New_Cost_Ex_VAT": float(new_ex),
-                        "New_Repricer_Cost_Inc_VAT": float(new_inc),
+                        "New_Repricer_Cost": float(new_inc), "Pack_Quantity": mult,
                         "Change_vs_Current": float(new_inc - cur) if cur > 0 else None,
                         "Current_vs_Old_Supplier": round(ratio, 2) if ratio else None})
             if label == "INHOUSE":
                 status, note = "SKIPPED - IN-HOUSE", "Sellerboard says #InHouse, so cost not touched"
+            elif loose:
+                status, note = "REVIEW", "SKU contains a Banner code but not in a recognised format: confirm code and pack size"
             elif label != "BANNER":
                 status, note = "REVIEW", f"Matches a Banner code but Sellerboard label is {label}"
             elif ratio is not None and not SANITY[0] <= ratio <= SANITY[1]:
                 status, note = "REVIEW", f"Current cost is {ratio:.2f}x old supplier price x {mult}: check pack size"
             else:
                 status, note = "UPDATE", ""
+            # A Banner price far below the current cost (e.g. £0.03 loan dispensers) is never auto-approved:
+            # a near-zero cost would let the repricer sell at a loss
+            if status == "REVIEW" and a.approve_review and not (ratio and ratio > SANITY[1]):
+                status = "UPDATE - APPROVED REVIEW"
+            if status.startswith("UPDATE"):
                 upload_idx.append(i)
                 new_costs[i] = f"{new_inc:.2f}"
+            rec["Base_Supplier_SKU"] = code
         else:
-            loose = loose_code(sku, codes)
             stripped = re.sub(r"[\s.\-_]+$", "", sku.strip().upper())
-            if loose and label != "INHOUSE":
-                desc, old, new = sim[loose]
-                rec.update({"Base_Supplier_SKU": loose, "Supplier_Description": desc,
-                            "Supplier_Old_Price_Ex_VAT": float(old), "Supplier_New_Price_Ex_VAT": float(new)})
-                status, note = "REVIEW", "SKU contains a Banner code but not in a recognised format: confirm code and pack size"
-            elif how == "ambiguous leading zeros":
+            if how == "ambiguous leading zeros":
                 status, note = "REVIEW", "Code matches more than one supplier code once leading zeros are restored"
             elif label == "INHOUSE":
                 status, note = "SKIPPED - IN-HOUSE", ""
@@ -213,21 +221,21 @@ def main():
 
 COLUMNS = ["Status", "Note", "Amazon_SKU", "Merchant_ID", "ASIN", "Sellerboard_Label", "Base_Supplier_SKU",
            "Match_Rule", "Pack_Quantity", "Supplier_Description", "Old_Repricer_Cost", "Supplier_Old_Price_Ex_VAT",
-           "Supplier_New_Price_Ex_VAT", "New_Cost_Ex_VAT", "New_Repricer_Cost_Inc_VAT", "Change_vs_Current",
+           "Supplier_New_Price_Ex_VAT", "New_Cost_Ex_VAT", "New_Repricer_Cost", "Change_vs_Current",
            "Current_vs_Old_Supplier", "Title"]
 MONEY_COLS = {"Old_Repricer_Cost", "Supplier_Old_Price_Ex_VAT", "Supplier_New_Price_Ex_VAT", "New_Cost_Ex_VAT",
-              "New_Repricer_Cost_Inc_VAT", "Change_vs_Current"}
+              "New_Repricer_Cost", "Change_vs_Current"}
 
 
 def write_workbook(path, audit, a, vat):
     audit = audit.reindex(columns=COLUMNS)
-    order = ["UPDATE", "REVIEW", "SKIPPED - IN-HOUSE", "BANNER - NO INCREASE LISTED", "BANNER - CODE NOT FOUND",
+    order = ["UPDATE", "UPDATE - APPROVED REVIEW", "REVIEW", "SKIPPED - IN-HOUSE", "BANNER - NO INCREASE LISTED", "BANNER - CODE NOT FOUND",
              "IGNORED - NOT SUPPLIER"]
     sheets = {
-        "Updated": audit[audit.Status == "UPDATE"],
+        "Updated": audit[audit.Status.str.startswith("UPDATE")],
         "Review": audit[audit.Status == "REVIEW"],
         "In-House Skipped": audit[audit.Status == "SKIPPED - IN-HOUSE"],
-        "Banner Not Updated": audit[audit.Status.isin(order[3:5])],
+        "Banner Not Updated": audit[audit.Status.isin(order[4:6])],
         "All SKUs": audit,
     }
     upd = sheets["Updated"]
@@ -240,7 +248,7 @@ def write_workbook(path, audit, a, vat):
     summary += [("Total repricer rows", len(audit)), ("", ""),
                 ("Updated rows that had £0 cost before", int((upd.Old_Repricer_Cost == 0).sum())),
                 ("Updated rows that are multipacks", int((upd.Pack_Quantity.astype(float) > 1).sum())),
-                ("", ""), ("Only UPDATE rows are in Repricer_Upload_Updated_Costs.csv.", ""),
+                ("", ""), ("Only UPDATE rows (including approved Review rows) are in Repricer_Upload_Updated_Costs.csv.", ""),
                 ("REVIEW rows need a decision before their cost can change.", "")]
     with pd.ExcelWriter(path, engine="openpyxl") as xw:
         pd.DataFrame(summary).to_excel(xw, sheet_name="Summary", index=False, header=False)

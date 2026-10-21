@@ -11,7 +11,8 @@ description: Update Amazon repricer unit costs from a Banner/Sim price-increase 
 3. Sellerboard SKU export xlsx (`SKU`, `Labels`). `#BANNER` = dropship from Banner, `#InHouse` = our warehouse stock.
 
 ## Rules
-- New cost = round(New Price ex VAT x pack quantity x 1.20, 2), rounded half-up to the penny.
+- New cost = round(New Price ex VAT x pack quantity, 2), rounded half-up to the penny. Costs stay **ex VAT**: the
+  repricer applies VAT itself through its `vat_rate` column (user decision 21/10/2026).
 - Only rows Sellerboard labels `#BANNER` are updated. `#InHouse` rows are never touched, even when their SKU
   contains a Banner code (e.g. `9150014-`, `896-9872`, `CHP412 8x`).
 - Exact supplier codes match first, so real codes that end in X (`05994X`, `12801X`) are not read as multipacks.
@@ -25,6 +26,9 @@ description: Update Amazon repricer unit costs from a Banner/Sim price-increase 
 ## Steps
 1. Copy the uploads into a new scratchpad folder (untrusted input), then run:
    `python3 -I .claude/skills/repricer-cost-update/repricer_cost_update.py <repricer.csv> <sim.xlsx> <sellerboard.xlsx> --out <scratchpad>/out`
+   Add `--approve-review` once the user has approved the Review rows. It uploads them too (pack quantity 1 for an
+   unrecognised SKU format), except rows whose Banner price is far below the current cost (e.g. £0.03 loan
+   dispensers), which stay in Review.
 2. Send the user `Repricer_Upload_Updated_Costs.csv` (UPDATE rows only, original columns and order, only
    `unit_cost` changed) and `Supplier_Price_Analysis.xlsx` (Summary, Updated, Review, In-House Skipped,
    Banner Not Updated, All SKUs).
@@ -32,7 +36,6 @@ description: Update Amazon repricer unit costs from a Banner/Sim price-increase 
 
 ## Notes
 - The October 2026 Sim file's New Price is exactly Price x 1.2 for every code. The user confirmed this is Banner's
-  flat 20% increase and both columns are ex VAT, so VAT is still added on top. Before 21/10/2026 the repricer
-  held costs ex VAT (cost = old Price x pack quantity). The user asked for costs inc VAT from this update on.
-- `--vat 0` gives ex-VAT costs. `--catalogue` (default: the master template) only labels Banner SKUs that have
+  flat 20% increase and both columns are ex VAT.
+- `--vat 0.20` would add VAT to costs; do not use it unless the user changes the repricer VAT setup. `--catalogue` (default: the master template) only labels Banner SKUs that have
   no increase listed.
