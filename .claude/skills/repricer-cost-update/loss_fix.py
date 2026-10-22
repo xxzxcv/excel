@@ -14,10 +14,10 @@ VAT
 Raw lines are copied; only unit_cost, shipping_cost and vat_rate are replaced. Rows that need no change are
 left out of the upload files.
 """
-import csv, re, sys, collections
+import csv, os, re, sys, collections
 from decimal import Decimal, ROUND_HALF_UP
 from openpyxl import load_workbook
-sys.path.insert(0, '/home/user/excel/.claude/skills/repricer-cost-update')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import repricer_cost_update as R
 
 src, sim_path, sb_path, catalogue_path, outdir = sys.argv[1:6]

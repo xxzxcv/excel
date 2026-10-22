@@ -39,3 +39,17 @@ description: Update Amazon repricer unit costs from a Banner/Sim price-increase 
   flat 20% increase and both columns are ex VAT.
 - `--vat 0.20` would add VAT to costs; do not use it unless the user changes the repricer VAT setup. `--catalogue` (default: the master template) only labels Banner SKUs that have
   no increase listed.
+
+## Loss check on a fresh repricer export (`loss_fix.py`)
+Use when the user sends a full repricer export (15 columns incl. `shipping_cost`, `vat_rate`) and reports losses:
+`python3 -I .claude/skills/repricer-cost-update/loss_fix.py <export.csv> <sim.xlsx> <sellerboard.xlsx> Banner_Payment_Master_Template.xlsx <outdir> [taxcat.csv ...]`
+- Writes `Repricer_Upload_1_SKUs_Starting_With_0.csv`, `Repricer_Upload_2_All_Other_Banner_SKUs.csv` (only rows that
+  change; raw lines kept so leading zeros and quoting survive) and `Fix_Audit_All_SKUs.csv`.
+- £3.50 shipping is added when Banner's line value is under £16.50 and is never removed in this pass.
+- VAT 0 becomes 20 unless the Amazon tax category says otherwise. Get categories from Sellerboard `products`
+  (ASIN batches of 35) into CSVs with columns `sku,vat_category`. In Oct 2026 every SKU starting with 0 was
+  `A_GEN_STANDARD`; tea, coffee, milk, sugar and cereal were `A_FOOD_TEA` (kept at 0).
+- Banner codes not in the Sim file: cost = max(current, Price Web + 20%). The user's own export already carried the
+  +20% on 361 of these.
+- 22/10/2026 finding: losses came from £0 shipping on items under £16.50 and VAT 0 on standard-rated items, not
+  from wrong costs. The user uploads the CSV without opening it in Excel (Excel strips leading zeros).
