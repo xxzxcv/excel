@@ -53,3 +53,12 @@ Use when the user sends a full repricer export (15 columns incl. `shipping_cost`
   +20% on 361 of these.
 - 22/10/2026 finding: losses came from £0 shipping on items under £16.50 and VAT 0 on standard-rated items, not
   from wrong costs. The user uploads the CSV without opening it in Excel (Excel strips leading zeros).
+
+## Assigning a repricer rule (`rule_assign.py`)
+For a Repricer "essentials" export (`sku,...,price_min,price_max,repricer_name,sales_rule`):
+`python3 -I .claude/skills/repricer-cost-update/rule_assign.py <essentials.csv> <Fix_Audit_All_SKUs.csv> <out.csv> "<rule name>"`
+- "No rule" shows as `Off` in `repricer_name` (never blank). Only Banner rows with `Off` are written.
+- Banner/in-house comes from the latest `loss_fix.py` audit; in-house, non-Banner and £0-cost Banner rows are left out
+  (a £0 cost would let the rule's automatic min price go to £0).
+- Listings without a rule have `price_min`/`price_max` = 0; the repricer fills them in once a rule is assigned.
+- The rule already used for Banner is named `Lowest Price for SIM Banner ` (with a trailing space).
