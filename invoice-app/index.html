@@ -1455,7 +1455,7 @@ const CSV_FIELDS = {
   postcode: { label: 'Postcode', aliases: ['postcode', 'postalcode', 'zip', 'zipcode', 'shippostalcode', 'shiptopostcode', 'shiptozip', 'shipzipcode', 'shipzip', 'billingpostcode', 'billingzip', 'shippingpostcode', 'shippingzip', 'posttopostcode', 'buyerpostcode'] },
   country: { label: 'Country', aliases: ['country', 'shipcountry', 'shiptocountry', 'billingcountry', 'shippingcountry', 'posttocountry', 'buyercountry'] },
 };
-const normHeader = (h) => String(h || '').replace(/^﻿/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const normHeader = (h) => String(h || '').replace(/^\uFEFF/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
 function mapHeaders(headers) {
   const map = {};
@@ -1574,8 +1574,8 @@ async function readFileText(file) {
   const buf = await file.arrayBuffer();
   let text = new TextDecoder('utf-8').decode(buf);
   // Excel on Windows often saves CSV as Windows-1252, which breaks "£" – fall back if UTF-8 fails.
-  if (text.includes('�')) text = new TextDecoder('windows-1252').decode(buf);
-  return text.replace(/^﻿/, '');
+  if (text.includes('\uFFFD')) text = new TextDecoder('windows-1252').decode(buf);
+  return text.replace(/^\uFEFF/, '');
 }
 
 async function handleCsvFile(file) {
