@@ -5,27 +5,27 @@ It makes A4 VAT invoices as PDFs, either one at a time (**Manual entry**) or in 
 export of your Amazon, eBay, TikTok Shop, Temu, OnBuy, Etsy, Tesco, Joybuy or website orders
 (**CSV bulk upload**).
 
-Nothing is uploaded anywhere. Your orders stay on your computer, and the app works offline.
+Nothing is uploaded anywhere. Your orders stay on your computer. The app is a single file; it needs an internet
+connection when the page opens so it can load its PDF and ZIP libraries from a public CDN.
 
 ```
 invoice-app/
-├── index.html          ← the app (open this)
+├── index.html          ← the whole app (open this)
 ├── sample-orders.csv   ← example CSV in the right format
-├── README.md
-└── lib/                ← PDF, ZIP, font and logo files the app needs (keep next to index.html)
+└── README.md
 ```
 
 ---
 
 ## 1. How to run it
 
-1. Download the `invoice-app` folder. On GitHub: **Code → Download ZIP**, then unzip it.
-2. Open the folder and **double-click `index.html`**. It opens in your default browser.
-   Chrome, Edge, Firefox and Safari all work.
+1. Save `index.html` anywhere on your computer (or copy the code into a new text file and save it as `index.html`).
+2. **Double-click `index.html`**. It opens in your default browser. Chrome, Edge, Firefox and Safari all work.
 3. Optional: bookmark the page, or make a desktop shortcut to `index.html`.
+4. Optional: in **Settings → Logo on invoices**, choose your Office Point logo image (PNG or JPG). Until you
+   do, "Office Point" is written in the brand greens.
 
-You don't need to install anything, run a server or have an account. Always keep the `lib` folder next to
-`index.html`. If `lib` goes missing, the app tries to load the libraries from the internet instead.
+You don't need to install anything, run a server or have an account.
 
 > **Tip:** if your browser asks where to save each download, turn on
 > *Settings → Downloads → Save files without asking* (Chrome/Edge) so bulk downloads are one click.
@@ -205,5 +205,8 @@ below it to change the sales channels.
   [jsPDF-AutoTable](https://github.com/simonbengtsson/jsPDF-AutoTable) 3.8.4. The text is real, selectable
   and searchable, not a screenshot. Long orders run onto more pages, and the table headers and page numbers repeat.
 - ZIP files are made with [JSZip](https://stuk.github.io/jszip/) 3.10.1.
-- The Roboto font (Apache 2.0) is built in, so accented names such as *Siobhán* or *Łukasz* print correctly.
+- Libraries load from the jsDelivr CDN, with unpkg as an automatic backup.
+- PDFs use the standard Helvetica font, which covers Western European letters (é, ö, ñ, £, €). Letters outside
+  it are simplified rather than printed as garbage (e.g. *Łukasz Żółć* → *Lukasz Zólc*).
+- An uploaded logo is stored in the browser with the other settings.
 - Page size: A4 portrait (210 × 297 mm).

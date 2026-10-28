@@ -103,10 +103,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .brand-logo {
-  height: 40px; padding: 5px 9px; border-radius: 9px; background: #fff;
+  height: 40px; padding: 4px 10px; border-radius: 9px; background: #fff;
   border: 1px solid var(--border); display: flex; align-items: center;
 }
 .brand-logo img { height: 100%; display: block; }
+.text-logo { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif; }
+.text-logo b { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+.text-logo b .o { color: #2a833b; }
+.text-logo b .p { color: #9bbb0c; }
+.text-logo small { font-size: 7.5px; font-weight: 700; color: #2a833b; margin-top: 1px; }
+.logo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.logo-thumb { height: 34px; max-width: 160px; object-fit: contain; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 3px; }
 .brand-title { display: flex; flex-direction: column; min-width: 0; }
 .brand-title strong { font-size: 15px; white-space: nowrap; }
 .brand-title span { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -355,6 +362,7 @@ dialog .dlg-foot { padding: 12px 20px 16px; display: flex; justify-content: flex
   .topbar { padding: 8px 16px; gap: 10px; }
   .brand-title span { display: none; }
   .brand-logo { height: 34px; }
+  .text-logo b { font-size: 16px; }
   .wrap { padding: 14px 16px 40px; }
   .tabs { display: flex; }
   .tab { flex: 1; justify-content: center; padding: 8px 10px; }
@@ -376,7 +384,7 @@ dialog .dlg-foot { padding: 12px 20px 16px; display: flex; justify-content: flex
 
 <header class="topbar">
   <div class="brand">
-    <div class="brand-logo"><img id="brandLogo" alt="Office Point – Shopping made easier"></div>
+    <div class="brand-logo" id="brandLogo"></div>
     <div class="brand-title">
       <strong>Invoice Generator</strong>
       <span>Sim Distributors Ltd · VAT GB378692435</span>
@@ -682,6 +690,15 @@ dialog .dlg-foot { padding: 12px 20px 16px; display: flex; justify-content: flex
           </div>
         </label>
       </div>
+      <div class="field">
+        <span>Logo on invoices <em>(optional PNG or JPG – otherwise "Office Point" is written in brand colours)</em></span>
+        <div class="logo-row">
+          <img class="logo-thumb" id="s-logoThumb" alt="Current logo" hidden>
+          <button class="btn sm" type="button" id="s-logoBtn">Choose logo…</button>
+          <button class="btn sm ghost danger" type="button" id="s-logoRemove" hidden>Remove</button>
+          <input type="file" id="s-logoInput" accept="image/png,image/jpeg,image/webp" hidden>
+        </div>
+      </div>
       <div>
         <div class="hint" style="margin-bottom:5px">Next invoice number will be</div>
         <div class="preview-no mono" id="s-preview">–</div>
@@ -696,14 +713,13 @@ dialog .dlg-foot { padding: 12px 20px 16px; display: flex; justify-content: flex
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
-<!-- Libraries are bundled in ./lib so the app works offline. The CDN copies are a fallback only. -->
-<script src="lib/assets.js"></script>
-<script src="lib/jspdf.umd.min.js"></script>
-<script>window.jspdf || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"><\/script>')</script>
-<script src="lib/jspdf.plugin.autotable.min.js"></script>
-<script>(window.jspdf && window.jspdf.jsPDF.API.autoTable) || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"><\/script>')</script>
-<script src="lib/jszip.min.js"></script>
-<script>window.JSZip || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"><\/script>')</script>
+<!-- Libraries load from the jsDelivr CDN; unpkg is used automatically if jsDelivr is unreachable. -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script>window.jspdf || document.write('<script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"><\/script>')</script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+<script>(window.jspdf && window.jspdf.jsPDF.API.autoTable) || document.write('<script src="https://unpkg.com/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"><\/script>')</script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>window.JSZip || document.write('<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"><\/script>')</script>
 
 <script>
 'use strict';
@@ -891,19 +907,29 @@ const PDF = {
   brand: [42, 131, 59], brandDark: [30, 98, 44], lime: [155, 187, 12],
   ink: [27, 36, 30], muted: [98, 110, 102], line: [221, 228, 218], tint: [243, 247, 241], stripe: [249, 251, 248],
 };
-const hasAssets = () => !!(window.OP_ASSETS && OP_ASSETS.fontRegular);
-const FONT = () => (hasAssets() ? 'Roboto' : 'helvetica');
+const FONT = () => 'helvetica';
+/** Optional logo uploaded in Settings: { data: dataURL, w, h, fmt: 'PNG' | 'JPEG' }. */
+let customLogo = store.get('logo', null);
+
+/**
+ * The built-in PDF font (Helvetica) covers Western European letters (é, ö, ñ, £, € …).
+ * Anything else is simplified so it never prints as garbage: "Łukasz Żółć" -> "Lukasz Zolc".
+ */
+const WINANSI_EXTRA = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
+const PDF_CHAR_MAP = { 'Ł': 'L', 'ł': 'l', 'Đ': 'D', 'đ': 'd', 'Ħ': 'H', 'ħ': 'h', 'ı': 'i', 'ĸ': 'k', 'Ŀ': 'L', 'ŀ': 'l', 'Ŧ': 'T', 'ŧ': 't', '\t': ' ', '−': '-', '‐': '-', '‑': '-', '′': "'", '″': '"' };
+function pdfSafe(value) {
+  return String(value ?? '').replace(/[^\x20-\x7E\xA0-\xFF\n]/g, ch => {
+    if (WINANSI_EXTRA.includes(ch)) return ch;
+    if (PDF_CHAR_MAP[ch] !== undefined) return PDF_CHAR_MAP[ch];
+    const base = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return /^[\x20-\x7E\xA0-\xFF]+$/.test(base) ? base : (ch === '\r' ? '' : '?');
+  });
+}
 
 function createDoc(title) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
-  if (hasAssets()) {
-    doc.addFileToVFS('Roboto-Regular.ttf', OP_ASSETS.fontRegular);
-    doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-    doc.addFileToVFS('Roboto-Bold.ttf', OP_ASSETS.fontBold);
-    doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
-  }
-  doc.setProperties({ title: title || 'Tax Invoice', author: COMPANY.name, subject: 'Tax Invoice', creator: `${COMPANY.store} Invoice Generator` });
+  doc.setProperties({ title: pdfSafe(title || 'Tax Invoice'), author: COMPANY.name, subject: 'Tax Invoice', creator: `${COMPANY.store} Invoice Generator` });
   return doc;
 }
 
@@ -918,7 +944,10 @@ function addressLines(address) {
 }
 
 /** Draws one invoice starting on the doc's current (blank) page. */
-function drawInvoice(doc, inv) {
+function drawInvoice(doc, rawInv) {
+  const inv = { ...rawInv };
+  ['invoiceNumber', 'orderId', 'channel', 'clientName', 'address', 'notes'].forEach(k => { inv[k] = pdfSafe(rawInv[k]); });
+  inv.items = (rawInv.items || []).map(it => ({ ...it, description: pdfSafe(it.description) }));
   const c = calcInvoice(inv);
   const { W, H, M } = PDF;
   const R = W - M;
@@ -928,13 +957,24 @@ function drawInvoice(doc, inv) {
   // ---- Header: logo + title ----
   let y = 14;
   let logoH = 0;
-  if (hasAssets()) {
-    const lw = 56;
-    logoH = lw * OP_ASSETS.logoHeight / OP_ASSETS.logoWidth;
-    doc.addImage(OP_ASSETS.logoJpeg, 'JPEG', M - 1, y, lw, logoH, 'oplogo', 'FAST');
+  if (customLogo) {
+    // Fit inside 60 x 18 mm, keeping the logo's proportions.
+    const scale = Math.min(60 / customLogo.w, 18 / customLogo.h);
+    const lw = customLogo.w * scale;
+    logoH = customLogo.h * scale;
+    doc.addImage(customLogo.data, customLogo.fmt, M, y, lw, logoH, 'oplogo', 'FAST');
+    logoH = Math.max(logoH, 12);
   } else {
-    setText(doc, 'bold', 20, PDF.brand); doc.text(COMPANY.store, M, y + 8);
-    setText(doc, 'bold', 9, PDF.brand); doc.text(COMPANY.slogan, M, y + 13);
+    // Text version of the Office Point logo: "Office" dark green, "Point" lime, slogan underneath.
+    const [first, ...rest] = COMPANY.store.split(' ');
+    setText(doc, 'bold', 27, PDF.brand);
+    doc.text(first, M, y + 9);
+    const w1 = doc.getTextWidth(first);
+    setText(doc, 'bold', 27, PDF.lime);
+    doc.text(rest.join(' '), M + w1 + 1.5, y + 9);
+    const w2 = doc.getTextWidth(rest.join(' '));
+    setText(doc, 'bold', 9, PDF.brand);
+    doc.text(COMPANY.slogan, M + w1 + 1.5 + w2, y + 14, { align: 'right' });
     logoH = 14;
   }
   setText(doc, 'bold', 22, PDF.ink);
@@ -1029,16 +1069,16 @@ function drawInvoice(doc, inv) {
       font: FONT(), fontSize: 9, textColor: PDF.ink, valign: 'middle', overflow: 'linebreak',
       cellPadding: { top: 3.2, bottom: 3.2, left: 2.4, right: 2.4 }, lineColor: PDF.line,
     },
-    headStyles: { fillColor: PDF.brand, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.8, cellPadding: { top: 2.6, bottom: 2.6, left: 2.4, right: 2.4 } },
+    headStyles: { fillColor: PDF.brand, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.4, cellPadding: { top: 2.6, bottom: 2.6, left: 1.8, right: 1.8 } },
     alternateRowStyles: { fillColor: PDF.stripe },
     columnStyles: {
       0: { cellWidth: 'auto' },
       1: { cellWidth: 11, halign: 'center' },
       2: { cellWidth: 21, halign: 'right' },
-      3: { cellWidth: 24, halign: 'right' },
+      3: { cellWidth: 25, halign: 'right' },
       4: { cellWidth: 12, halign: 'center' },
-      5: { cellWidth: 20, halign: 'right' },
-      6: { cellWidth: 25, halign: 'right', fontStyle: 'bold' },
+      5: { cellWidth: 21, halign: 'right' },
+      6: { cellWidth: 26, halign: 'right', fontStyle: 'bold' },
     },
     didParseCell(data) {
       if (data.section === 'head') data.cell.styles.halign = colAlign[data.column.index];
@@ -1133,9 +1173,9 @@ function drawInvoice(doc, inv) {
 function drawContinuationHeader(doc, inv) {
   const { M, W } = PDF;
   setText(doc, 'bold', 10, PDF.ink);
-  doc.text(`${COMPANY.store} · Tax Invoice ${inv.invoiceNumber || ''}`, M, 14);
+  doc.text(pdfSafe(`${COMPANY.store} · Tax Invoice ${inv.invoiceNumber || ''}`), M, 14);
   setText(doc, 'normal', 8.5, PDF.muted);
-  doc.text(`Order ${inv.orderId || '—'} · continued`, W - M, 14, { align: 'right' });
+  doc.text(pdfSafe(`Order ${inv.orderId || '—'} · continued`), W - M, 14, { align: 'right' });
   doc.setDrawColor(...PDF.line); doc.setLineWidth(0.3);
   doc.line(M, 17.5, W - M, 17.5);
 }
@@ -1152,7 +1192,7 @@ function pdfFileName(inv) {
 }
 function librariesReady() {
   if (window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API.autoTable) return true;
-  toast('The PDF library did not load. Keep the "lib" folder next to index.html, or connect to the internet once.', 'error');
+  toast('The PDF library did not load. Check your internet connection and reload the page.', 'error');
   return false;
 }
 
@@ -1178,7 +1218,7 @@ const preview = {
       return;
     }
     if (!(window.jspdf && window.jspdf.jsPDF.API.autoTable)) {
-      $('#previewEmptyText').textContent = 'PDF library not loaded – keep the "lib" folder next to index.html.';
+      $('#previewEmptyText').textContent = 'PDF library not loaded – check your internet connection and reload the page.';
       return;
     }
     try {
@@ -1798,6 +1838,47 @@ function applyTheme(theme) {
   $('#themeLabel').textContent = theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'Auto';
 }
 
+function renderBrandLogo() {
+  const el = $('#brandLogo');
+  el.innerHTML = customLogo
+    ? `<img src="${customLogo.data}" alt="${escapeHtml(COMPANY.store)}">`
+    : `<span class="text-logo" aria-label="${escapeHtml(COMPANY.store)}"><b><span class="o">Office</span><span class="p">Point</span></b><small>${escapeHtml(COMPANY.slogan)}</small></span>`;
+  const thumb = $('#s-logoThumb');
+  thumb.hidden = !customLogo;
+  if (customLogo) thumb.src = customLogo.data;
+  $('#s-logoRemove').hidden = !customLogo;
+}
+
+/** Reads an image file, converts anything that isn't PNG/JPEG to PNG and stores it for the PDF. */
+function loadLogoFile(file) {
+  if (!file) return;
+  if (!/^image\//.test(file.type)) return toast('Please choose a PNG or JPG image.', 'error');
+  if (file.size > 1.5 * 1024 * 1024) return toast('That image is over 1.5 MB – please use a smaller logo.', 'error');
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      let data = reader.result;
+      let fmt = file.type === 'image/png' ? 'PNG' : file.type === 'image/jpeg' ? 'JPEG' : '';
+      if (!fmt) {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        data = canvas.toDataURL('image/png'); fmt = 'PNG';
+      }
+      customLogo = { data, w: img.naturalWidth, h: img.naturalHeight, fmt };
+      store.set('logo', customLogo);
+      renderBrandLogo();
+      updateManual();
+      if (activeTab === 'bulk') selectOrder(bulk.index, false);
+      toast('Logo saved');
+    };
+    img.onerror = () => toast('Could not read that image.', 'error');
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function bindChrome() {
   $$('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
   $('.tabs').addEventListener('keydown', e => {
@@ -1839,10 +1920,20 @@ function bindChrome() {
   });
 
   $('#openTabBtn').addEventListener('click', () => preview.openInTab());
+
+  $('#s-logoBtn').addEventListener('click', () => $('#s-logoInput').click());
+  $('#s-logoInput').addEventListener('change', e => { loadLogoFile(e.target.files[0]); e.target.value = ''; });
+  $('#s-logoRemove').addEventListener('click', () => {
+    customLogo = null;
+    try { localStorage.removeItem('opinv.logo'); } catch { /* ignore */ }
+    renderBrandLogo(); updateManual();
+    if (activeTab === 'bulk') selectOrder(bulk.index, false);
+    toast('Logo removed');
+  });
 }
 
 (function init() {
-  if (hasAssets()) $('#brandLogo').src = OP_ASSETS.logoJpeg;
+  renderBrandLogo();
   const draft = store.get('draft', null);
   manual = Object.assign(newManualInvoice(), draft && !draft.downloaded ? draft : {});
   if (!Array.isArray(manual.items) || !manual.items.length) manual.items = [blankItem()];
