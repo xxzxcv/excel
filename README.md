@@ -1,5 +1,8 @@
 # Banner Dropship – Daily Supplier Payment Master Template
 
+> **Also in this repo:** [`invoice-app/`](invoice-app/README.md) – the Office Point invoice generator
+> (manual VAT invoices + bulk PDFs from marketplace CSV exports). Open `invoice-app/index.html` in a browser.
+
 `Banner_Payment_Master_Template.xlsx` is ready to use. It already contains Banner's catalogue and the
 sample orders for 19/10/2026, so you can see it working straight away.
 

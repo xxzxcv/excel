@@ -1,0 +1,1857 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Office Point Invoices</title>
+<meta name="description" content="Create VAT invoices for Office Point orders, one at a time or in bulk from a CSV file.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a833b'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='700' font-size='15' fill='white' text-anchor='middle'%3EOP%3C/text%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f3f5f1;
+  --surface: #ffffff;
+  --surface-2: #f7f9f5;
+  --surface-3: #eef2eb;
+  --border: #dfe5db;
+  --border-strong: #c9d2c4;
+  --text: #18241b;
+  --muted: #5c6a60;
+  --faint: #8a968d;
+  --brand: #2a833b;
+  --brand-hover: #216a2f;
+  --brand-soft: #e5f2e6;
+  --brand-text: #ffffff;
+  --accent: #9bbb0c;
+  --danger: #c0392b;
+  --danger-soft: #fbe9e7;
+  --warn: #9a6700;
+  --warn-soft: #fff4d6;
+  --focus: 0 0 0 3px rgba(42, 131, 59, .25);
+  --shadow: 0 1px 2px rgba(16, 24, 18, .05), 0 4px 16px rgba(16, 24, 18, .05);
+  --radius: 12px;
+  --radius-sm: 8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1310;
+    --surface: #161d18;
+    --surface-2: #1b241e;
+    --surface-3: #212b24;
+    --border: #2a352d;
+    --border-strong: #38463c;
+    --text: #e5ece6;
+    --muted: #9eaba2;
+    --faint: #6f7d73;
+    --brand: #43a856;
+    --brand-hover: #5bbd6d;
+    --brand-soft: #1d3322;
+    --brand-text: #08130b;
+    --accent: #b5d334;
+    --danger: #ef6f60;
+    --danger-soft: #3a1d1a;
+    --warn: #e5b445;
+    --warn-soft: #33290f;
+    --focus: 0 0 0 3px rgba(67, 168, 86, .35);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1310;
+  --surface: #161d18;
+  --surface-2: #1b241e;
+  --surface-3: #212b24;
+  --border: #2a352d;
+  --border-strong: #38463c;
+  --text: #e5ece6;
+  --muted: #9eaba2;
+  --faint: #6f7d73;
+  --brand: #43a856;
+  --brand-hover: #5bbd6d;
+  --brand-soft: #1d3322;
+  --brand-text: #08130b;
+  --accent: #b5d334;
+  --danger: #ef6f60;
+  --danger-soft: #3a1d1a;
+  --warn: #e5b445;
+  --warn-soft: #33290f;
+  --focus: 0 0 0 3px rgba(67, 168, 86, .35);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 Inter, "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+/* ---------- Top bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 24px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-logo {
+  height: 40px; padding: 5px 9px; border-radius: 9px; background: #fff;
+  border: 1px solid var(--border); display: flex; align-items: center;
+}
+.brand-logo img { height: 100%; display: block; }
+.brand-title { display: flex; flex-direction: column; min-width: 0; }
+.brand-title strong { font-size: 15px; white-space: nowrap; }
+.brand-title span { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-actions { margin-left: auto; display: flex; gap: 8px; }
+
+/* ---------- Layout ---------- */
+.wrap { max-width: 1560px; margin: 0 auto; padding: 20px 24px 48px; }
+.tabs {
+  display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 18px;
+  background: var(--surface-3); border: 1px solid var(--border); border-radius: 11px;
+}
+.tab {
+  border: 0; background: transparent; padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 8px;
+}
+.tab svg { width: 16px; height: 16px; }
+.tab[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.tab:focus-visible { outline: none; box-shadow: var(--focus); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(400px, 46%); gap: 22px; align-items: start; }
+.stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); min-width: 0;
+}
+.card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 18px 0;
+}
+.card-head h2 { margin: 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.card-head h2 .step {
+  width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center;
+  font-size: 11.5px; background: var(--brand-soft); color: var(--brand);
+}
+.card-body { padding: 14px 18px 18px; }
+.hint { color: var(--muted); font-size: 12.5px; margin: 0; }
+
+/* ---------- Form controls ---------- */
+.grid { display: grid; gap: 12px 14px; }
+.g-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field > span { font-size: 12px; font-weight: 600; color: var(--muted); }
+.field > span em { font-style: normal; font-weight: 400; color: var(--faint); }
+.input, select.input, textarea.input {
+  width: 100%; min-width: 0; padding: 8px 10px;
+  background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+textarea.input { resize: vertical; min-height: 92px; }
+.input:hover { border-color: var(--faint); }
+.input:focus { outline: none; border-color: var(--brand); box-shadow: var(--focus); background: var(--surface); }
+.input.invalid { border-color: var(--danger); }
+.input-group { display: flex; gap: 6px; }
+.input-group .input { flex: 1; }
+.input-affix { position: relative; }
+.input-affix > .affix {
+  position: absolute; top: 50%; transform: translateY(-50%); color: var(--faint); pointer-events: none; font-size: 13px;
+}
+.input-affix > .affix.pre { left: 10px; }
+.input-affix > .affix.post { right: 10px; }
+.input-affix > .input.has-pre { padding-left: 22px; }
+.input-affix > .input.has-post { padding-right: 24px; }
+input[type="number"]::-webkit-inner-spin-button { opacity: .5; }
+
+.seg {
+  display: inline-flex; padding: 3px; gap: 3px; border-radius: 9px;
+  background: var(--surface-3); border: 1px solid var(--border);
+}
+.seg button {
+  border: 0; background: transparent; padding: 5px 11px; border-radius: 7px; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--muted);
+}
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.seg button:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 8px 14px; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap;
+  border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
+  font-weight: 600; font-size: 13.5px; transition: background .15s, border-color .15s, transform .05s;
+}
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn:hover { background: var(--surface-3); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: none; box-shadow: var(--focus); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-text); }
+.btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+.btn.ghost { border-color: transparent; background: transparent; }
+.btn.ghost:hover { background: var(--surface-3); }
+.btn.sm { padding: 5px 10px; font-size: 12.5px; }
+.btn.icon { padding: 7px; }
+.btn.lg { padding: 11px 18px; font-size: 14.5px; }
+.btn.danger:hover { color: var(--danger); background: var(--danger-soft); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ---------- Items ---------- */
+.items { display: flex; flex-direction: column; gap: 10px; }
+.item {
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2);
+  padding: 10px 10px 8px;
+}
+.item-grid {
+  display: grid; gap: 8px;
+  grid-template-columns: minmax(160px, 1fr) 76px 120px 92px 34px;
+  align-items: end;
+}
+.item .field > span { font-size: 11.5px; }
+.item-calc {
+  display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; padding-top: 7px;
+  border-top: 1px dashed var(--border); font-size: 12.5px; color: var(--muted);
+}
+.item-calc b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.item-calc .line-total { margin-left: auto; }
+.item-calc .line-total b { color: var(--brand); }
+.item-num {
+  font-size: 11px; font-weight: 700; color: var(--faint); letter-spacing: .04em; margin-bottom: 6px;
+}
+
+/* ---------- Totals ---------- */
+.totals { display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
+.totals .row { display: flex; justify-content: space-between; padding: 6px 0; color: var(--muted); }
+.totals .row b { color: var(--text); font-weight: 600; }
+.totals .row + .row { border-top: 1px solid var(--border); }
+.totals .grand {
+  margin-top: 8px; padding: 12px 14px; border-radius: 10px; background: var(--brand); color: var(--brand-text);
+  display: flex; justify-content: space-between; align-items: baseline; font-weight: 700;
+}
+.totals .grand b { font-size: 20px; }
+.actions-bar {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+}
+
+/* ---------- Preview ---------- */
+.preview {
+  position: sticky; top: 78px; display: flex; flex-direction: column;
+  height: calc(100vh - 100px); min-height: 520px; overflow: hidden;
+}
+.preview-head {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 18px; border-bottom: 1px solid var(--border);
+}
+.preview-head h2 { margin: 0; font-size: 14px; }
+.preview-head .status { font-size: 12px; color: var(--faint); margin-right: auto; display: flex; align-items: center; gap: 6px; }
+.status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
+.status.busy .dot { background: var(--accent); animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+.preview-body { flex: 1; background: var(--surface-3); position: relative; }
+.preview-body iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--surface-3); }
+.preview-empty {
+  position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted);
+}
+.preview-empty svg { width: 46px; height: 46px; color: var(--faint); margin-bottom: 8px; }
+.mobile-hint { display: none; padding: 8px 18px; border-bottom: 1px solid var(--border); }
+
+/* ---------- Bulk ---------- */
+.drop {
+  border: 2px dashed var(--border-strong); border-radius: 12px; padding: 26px 18px; text-align: center;
+  background: var(--surface-2); cursor: pointer; transition: border-color .15s, background .15s;
+}
+.drop:hover, .drop.over { border-color: var(--brand); background: var(--brand-soft); }
+.drop:focus-visible { outline: none; box-shadow: var(--focus); }
+.drop svg { width: 34px; height: 34px; color: var(--brand); }
+.drop strong { display: block; margin: 6px 0 2px; font-size: 14.5px; }
+.drop .file-name { margin-top: 8px; font-weight: 600; color: var(--brand); }
+.options { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px 16px; margin-top: 14px; }
+.options .field .seg { align-self: flex-start; }
+
+.stats { display: flex; flex-wrap: wrap; gap: 10px; }
+.stat {
+  flex: 1 1 110px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border);
+}
+.stat span { display: block; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.stat b { font-size: 18px; font-variant-numeric: tabular-nums; }
+
+.nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nav .pos { font-weight: 600; font-variant-numeric: tabular-nums; min-width: 110px; text-align: center; }
+
+.table-wrap { overflow: auto; max-height: 420px; border: 1px solid var(--border); border-radius: 10px; }
+table.orders { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.orders th {
+  position: sticky; top: 0; background: var(--surface-3); text-align: left; font-size: 11.5px; color: var(--muted);
+  font-weight: 700; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+table.orders td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.orders tr:last-child td { border-bottom: 0; }
+table.orders tbody tr { cursor: pointer; }
+table.orders tbody tr:hover { background: var(--surface-2); }
+table.orders tbody tr.sel { background: var(--brand-soft); }
+table.orders td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.orders td.cust { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 99px; font-size: 11px; font-weight: 700;
+  background: var(--surface-3); color: var(--muted); white-space: nowrap;
+}
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.badge.ok { background: var(--brand-soft); color: var(--brand); }
+
+.alert {
+  border-radius: 10px; padding: 10px 12px; font-size: 13px; display: flex; gap: 10px; align-items: flex-start;
+  background: var(--warn-soft); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent);
+}
+.alert.error { background: var(--danger-soft); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, transparent); }
+.alert ul { margin: 4px 0 0; padding-left: 18px; }
+.alert svg { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+
+.progress { height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: 0; background: var(--brand); transition: width .15s; }
+
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { padding: 3px 8px; border-radius: 6px; background: var(--surface-3); border: 1px solid var(--border); font-size: 12px; }
+.chip.req { border-color: color-mix(in srgb, var(--brand) 45%, transparent); background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+details.help summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--brand); }
+details.help[open] summary { margin-bottom: 10px; }
+details.help p { margin: 8px 0; color: var(--muted); font-size: 12.5px; }
+
+/* ---------- Dialog & toast ---------- */
+dialog {
+  border: 1px solid var(--border); border-radius: 14px; padding: 0; width: min(520px, calc(100vw - 32px));
+  background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .35);
+}
+dialog::backdrop { background: rgba(8, 12, 9, .5); backdrop-filter: blur(2px); }
+dialog .dlg-head { padding: 16px 20px 0; display: flex; justify-content: space-between; align-items: center; }
+dialog .dlg-head h2 { margin: 0; font-size: 16px; }
+dialog .dlg-body { padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+dialog .dlg-foot { padding: 12px 20px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); }
+.preview-no { padding: 10px 12px; border-radius: 9px; background: var(--brand-soft); color: var(--brand); font-weight: 700; }
+
+.toasts { position: fixed; bottom: 18px; right: 18px; z-index: 50; display: flex; flex-direction: column; gap: 8px; max-width: calc(100vw - 36px); }
+.toast {
+  padding: 10px 14px; border-radius: 10px; background: var(--text); color: var(--bg); box-shadow: var(--shadow);
+  font-weight: 500; font-size: 13.5px; animation: in .2s ease-out; max-width: 420px;
+}
+.toast.error { background: var(--danger); color: #fff; }
+@keyframes in { from { transform: translateY(8px); opacity: 0; } }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1180px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .preview { position: relative; top: 0; height: 82vh; }
+}
+@media (max-width: 720px) {
+  .topbar { padding: 8px 16px; gap: 10px; }
+  .brand-title span { display: none; }
+  .brand-logo { height: 34px; }
+  .wrap { padding: 14px 16px 40px; }
+  .tabs { display: flex; }
+  .tab { flex: 1; justify-content: center; padding: 8px 10px; }
+  .g-2, .g-4 { grid-template-columns: minmax(0, 1fr); }
+  .item-grid { grid-template-columns: 1fr 1fr; }
+  .item-grid .f-desc { grid-column: 1 / -1; }
+  .item-grid .f-del { grid-column: 2; justify-self: end; }
+  .item-calc .line-total { margin-left: 0; }
+  .btn-label-long { display: none; }
+  .preview { height: 75vh; min-height: 420px; }
+  .mobile-hint { display: block; }
+}
+@media (max-width: 420px) {
+  .topbar-actions .btn-label { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-logo"><img id="brandLogo" alt="Office Point – Shopping made easier"></div>
+    <div class="brand-title">
+      <strong>Invoice Generator</strong>
+      <span>Sim Distributors Ltd · VAT GB378692435</span>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn ghost" id="themeBtn" type="button" title="Switch light / dark mode" aria-label="Switch light or dark mode">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <span class="btn-label" id="themeLabel">Theme</span>
+    </button>
+    <button class="btn" id="settingsBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="btn-label">Settings</span>
+    </button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="tabs" role="tablist" aria-label="Mode">
+    <button class="tab" role="tab" id="tab-manual" aria-controls="panel-manual" aria-selected="true" data-tab="manual">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+      Manual entry
+    </button>
+    <button class="tab" role="tab" id="tab-bulk" aria-controls="panel-bulk" aria-selected="false" data-tab="bulk">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/></svg>
+      CSV bulk upload
+    </button>
+  </div>
+
+  <div class="layout">
+    <!-- ================= LEFT COLUMN ================= -->
+    <div class="stack">
+
+      <!-- ===== MODE A: MANUAL ===== -->
+      <section id="panel-manual" role="tabpanel" aria-labelledby="tab-manual" class="stack">
+        <div class="card">
+          <div class="card-head">
+            <h2><span class="step">1</span> Invoice details</h2>
+            <button class="btn sm ghost" type="button" id="newInvoiceBtn" title="Clear the form and start a new invoice">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              New invoice
+            </button>
+          </div>
+          <div class="card-body grid g-2">
+            <label class="field">
+              <span>Invoice number</span>
+              <div class="input-group">
+                <input class="input" id="m-invoiceNumber" autocomplete="off" required>
+                <button class="btn icon" type="button" id="nextNoBtn" title="Use the next invoice number" aria-label="Use the next invoice number">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+                </button>
+              </div>
+            </label>
+            <label class="field">
+              <span>Invoice date</span>
+              <input class="input" id="m-invoiceDate" type="date" required>
+            </label>
+            <label class="field">
+              <span>Order ID</span>
+              <input class="input" id="m-orderId" autocomplete="off" placeholder="e.g. 205-1234567-1234567">
+            </label>
+            <label class="field">
+              <span>Sales channel <em>(optional)</em></span>
+              <select class="input" id="m-channel"></select>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2><span class="step">2</span> Bill to</h2></div>
+          <div class="card-body grid g-2">
+            <label class="field">
+              <span>Client name</span>
+              <input class="input" id="m-clientName" autocomplete="off" placeholder="Customer or company name" required>
+            </label>
+            <label class="field" style="grid-row: span 2">
+              <span>Billing address <em>(one line per row)</em></span>
+              <textarea class="input" id="m-address" rows="4" placeholder="83 Baker Street&#10;London&#10;W1U 6AG&#10;United Kingdom"></textarea>
+            </label>
+            <label class="field">
+              <span>Notes on invoice <em>(optional)</em></span>
+              <input class="input" id="m-notes" autocomplete="off" placeholder="e.g. Paid in full – thank you">
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2><span class="step">3</span> Items</h2>
+            <div class="seg" role="group" aria-label="Prices you type">
+              <button type="button" data-inc="0" aria-pressed="true" title="Prices you type exclude VAT – VAT is added on top">Excl. VAT</button>
+              <button type="button" data-inc="1" aria-pressed="false" title="Prices you type already include VAT – VAT is worked out backwards">Incl. VAT</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="items" id="items"></div>
+            <div class="btn-row" style="margin-top:12px">
+              <button class="btn" type="button" id="addItemBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Add item
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2><span class="step">4</span> Shipping &amp; totals</h2></div>
+          <div class="card-body grid g-2" style="align-items:start">
+            <div class="grid g-2">
+              <label class="field">
+                <span id="shipLabel">Shipping price <em>(excl. VAT)</em></span>
+                <div class="input-affix">
+                  <span class="affix pre">£</span>
+                  <input class="input has-pre" id="m-shipping" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00">
+                </div>
+              </label>
+              <label class="field">
+                <span>Shipping VAT</span>
+                <div class="input-affix">
+                  <input class="input has-post" id="m-shippingVatRate" type="number" step="0.5" min="0" max="100" list="vatRates" inputmode="decimal">
+                  <span class="affix post">%</span>
+                </div>
+              </label>
+              <p class="hint" style="grid-column:1/-1">UK delivery charges are normally charged VAT at the same rate as the goods (20%).</p>
+            </div>
+            <div class="totals" id="m-totals"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body actions-bar">
+            <p class="hint" id="m-validation">Fill in the invoice and download the PDF.</p>
+            <div class="btn-row">
+              <button class="btn" type="button" id="m-printBtn" title="Open the PDF in a new tab to print">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+                <span class="btn-label-long">Open / print</span>
+              </button>
+              <button class="btn primary lg" type="button" id="m-downloadBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                Download PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== MODE B: BULK ===== -->
+      <section id="panel-bulk" role="tabpanel" aria-labelledby="tab-bulk" class="stack" hidden>
+        <div class="card">
+          <div class="card-head">
+            <h2><span class="step">1</span> Upload orders CSV</h2>
+            <button class="btn sm" type="button" id="sampleCsvBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              Sample CSV
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a CSV file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+              <strong>Drop your CSV here, or click to choose</strong>
+              <span class="hint">.csv, .tsv or .txt · comma, semicolon or tab separated · one row per item</span>
+              <div class="file-name" id="fileName" hidden></div>
+              <input type="file" id="csvInput" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden>
+            </div>
+
+            <div class="options">
+              <div class="field">
+                <span>Prices in my CSV are</span>
+                <div class="seg" role="group" aria-label="CSV price type" id="csvIncSeg">
+                  <button type="button" data-inc="0" aria-pressed="true">Excl. VAT</button>
+                  <button type="button" data-inc="1" aria-pressed="false">Incl. VAT</button>
+                </div>
+              </div>
+              <div class="field">
+                <span>Shipping column is</span>
+                <div class="seg" role="group" aria-label="Shipping column type" id="csvShipSeg">
+                  <button type="button" data-ship="order" aria-pressed="true" title="Shipping is charged once per order (first value is used)">Per order</button>
+                  <button type="button" data-ship="line" aria-pressed="false" title="Each item row has its own shipping charge – they are added up">Per item row</button>
+                </div>
+              </div>
+              <label class="field">
+                <span>Channel <em>(if not in CSV)</em></span>
+                <select class="input" id="csvChannel"></select>
+              </label>
+            </div>
+
+            <details class="help" style="margin-top:14px">
+              <summary>Which columns does the CSV need?</summary>
+              <p>Required (exact spelling not needed – common Amazon, eBay, TikTok, Temu, Etsy and OnBuy names are recognised too):</p>
+              <div class="chips" id="reqCols"></div>
+              <p>Optional:</p>
+              <div class="chips" id="optCols"></div>
+              <p>Use one row per item. Repeat the same Order ID on every row of a multi-item order and they become one invoice. Put the order's shipping on the first row (or leave it the same on every row). If an address contains commas, wrap it in double quotes – Excel does this for you when you save as CSV.</p>
+            </details>
+          </div>
+        </div>
+
+        <div id="csvMessages" class="stack" style="gap:10px"></div>
+
+        <div class="card" id="bulkResults" hidden>
+          <div class="card-head">
+            <h2><span class="step">2</span> Review &amp; download</h2>
+            <div class="nav">
+              <button class="btn icon" type="button" id="prevBtn" aria-label="Previous order" title="Previous order (←)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <span class="pos" id="navPos">–</span>
+              <button class="btn icon" type="button" id="nextBtn" aria-label="Next order" title="Next order (→)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="card-body stack" style="gap:14px">
+            <div class="stats" id="bulkStats"></div>
+            <div class="table-wrap">
+              <table class="orders">
+                <thead><tr><th>#</th><th>Order ID</th><th>Customer</th><th>Items</th><th style="text-align:right">Total</th><th>Invoice no.</th><th></th></tr></thead>
+                <tbody id="ordersBody"></tbody>
+              </table>
+            </div>
+            <div class="progress" id="bulkProgress" hidden><i></i></div>
+            <div class="actions-bar">
+              <div class="btn-row">
+                <button class="btn" type="button" id="editInManualBtn" title="Copy this order into Manual entry to change it">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                  <span class="btn-label-long">Edit this one</span>
+                </button>
+                <button class="btn" type="button" id="dlOneBtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                  This PDF
+                </button>
+              </div>
+              <div class="btn-row">
+                <button class="btn" type="button" id="dlMergedBtn" title="All invoices in one PDF – handy for printing">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+                  One PDF for printing
+                </button>
+                <button class="btn primary" type="button" id="dlZipBtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                  Download all (ZIP)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= RIGHT COLUMN: PREVIEW ================= -->
+    <aside class="card preview" aria-label="Invoice preview">
+      <div class="preview-head">
+        <h2>Preview</h2>
+        <span class="status" id="previewStatus"><span class="dot"></span><span id="previewStatusText">A4 PDF</span></span>
+        <button class="btn sm" type="button" id="openTabBtn" title="Open the preview in a new tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+          New tab
+        </button>
+      </div>
+      <p class="hint mobile-hint">Phone browsers may not show PDFs here – tap <b>New tab</b> to view.</p>
+      <div class="preview-body">
+        <iframe id="previewFrame" title="Invoice PDF preview" hidden></iframe>
+        <div class="preview-empty" id="previewEmpty">
+          <div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            <div id="previewEmptyText">The invoice preview appears here as you type.</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<datalist id="vatRates"><option value="20"><option value="5"><option value="0"></datalist>
+
+<dialog id="settingsDlg" aria-labelledby="settingsTitle">
+  <form method="dialog">
+    <div class="dlg-head">
+      <h2 id="settingsTitle">Settings</h2>
+      <button class="btn icon ghost" value="cancel" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="dlg-body">
+      <p class="hint">Invoice numbers count up automatically each time you download an invoice that uses the next number. Settings are saved in this browser only.</p>
+      <div class="grid g-2">
+        <label class="field">
+          <span>Number prefix <em>({YYYY} = year)</em></span>
+          <input class="input" id="s-prefix" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>Next number</span>
+          <input class="input" id="s-next" type="number" min="1" step="1">
+        </label>
+        <label class="field">
+          <span>Digits (zero-padded)</span>
+          <input class="input" id="s-pad" type="number" min="1" max="12" step="1">
+        </label>
+        <label class="field">
+          <span>Default VAT rate</span>
+          <div class="input-affix">
+            <input class="input has-post" id="s-vat" type="number" min="0" max="100" step="0.5" list="vatRates">
+            <span class="affix post">%</span>
+          </div>
+        </label>
+      </div>
+      <div>
+        <div class="hint" style="margin-bottom:5px">Next invoice number will be</div>
+        <div class="preview-no mono" id="s-preview">–</div>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn primary" value="save" id="s-save">Save settings</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<!-- Libraries are bundled in ./lib so the app works offline. The CDN copies are a fallback only. -->
+<script src="lib/assets.js"></script>
+<script src="lib/jspdf.umd.min.js"></script>
+<script>window.jspdf || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"><\/script>')</script>
+<script src="lib/jspdf.plugin.autotable.min.js"></script>
+<script>(window.jspdf && window.jspdf.jsPDF.API.autoTable) || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"><\/script>')</script>
+<script src="lib/jszip.min.js"></script>
+<script>window.JSZip || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"><\/script>')</script>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   1. Business details (hard-coded on every invoice)
+   ===================================================================== */
+const COMPANY = {
+  store: 'Office Point',
+  slogan: 'Shopping made easier',
+  name: 'Sim Distributors Ltd',
+  addressLines: ['Unit 8, Heron Industrial Estate', 'Reading, RG7 1PJ', 'United Kingdom'],
+  vatNumber: 'GB378692435',
+};
+const CHANNELS = ['Amazon', 'eBay', 'TikTok Shop', 'Temu', 'OnBuy', 'Etsy', 'Tesco', 'Joybuy', 'Website'];
+
+/* =====================================================================
+   2. Small helpers
+   ===================================================================== */
+const $ = (sel, el = document) => el.querySelector(sel);
+const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
+
+const store = {
+  get(key, fallback) {
+    try { const v = localStorage.getItem('opinv.' + key); return v == null ? fallback : JSON.parse(v); }
+    catch { return fallback; }
+  },
+  set(key, value) {
+    try { localStorage.setItem('opinv.' + key, JSON.stringify(value)); } catch { /* private mode */ }
+  },
+};
+
+const settings = Object.assign(
+  { prefix: 'OP{YYYY}-', nextNumber: 1, pad: 5, defaultVat: 20, csvIncVat: false, csvShipMode: 'order', csvChannel: '' },
+  store.get('settings', {})
+);
+const saveSettings = () => store.set('settings', settings);
+
+function formatInvoiceNo(n, s = settings) {
+  const y = String(new Date().getFullYear());
+  return String(s.prefix).replace(/\{YYYY\}/g, y).replace(/\{YY\}/g, y.slice(2)) +
+    String(n).padStart(Math.max(1, +s.pad || 1), '0');
+}
+function commitInvoiceNo(n) {
+  if (Number.isFinite(n) && n >= settings.nextNumber) { settings.nextNumber = n + 1; saveSettings(); }
+}
+
+/** Parse "£1,234.50", "12,5", " 20% " etc. Returns NaN for blanks/garbage. */
+function parseNum(v) {
+  if (typeof v === 'number') return v;
+  if (v == null) return NaN;
+  let s = String(v).trim().replace(/gbp|£|\$|€|%|\s/gi, '');
+  if (!s) return NaN;
+  if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g, '');
+  else if (/^-?\d+,\d{1,2}$/.test(s)) s = s.replace(',', '.');
+  if (/^\(.*\)$/.test(s)) s = '-' + s.slice(1, -1);
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+const numOr = (v, d) => { const n = parseNum(v); return Number.isFinite(n) ? n : d; };
+/** Pounds -> whole pence, avoiding floating point noise (e.g. 8 * 23.90375). */
+const toPence = (pounds) => Math.round(Number((pounds * 100).toFixed(6)));
+
+const gbp = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' });
+const money = (pence) => gbp.format(pence / 100);
+/** Unit prices may have more than 2 decimals – show up to 4, at least 2. */
+const moneyUnit = (pounds) => '£' + (Math.round(pounds * 10000) / 10000).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+const pct = (r) => (Math.round(r * 100) / 100) + '%';
+
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function formatDateLong(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if (!m) return iso || '';
+  return `${+m[3]} ${MONTHS[+m[2] - 1]} ${m[1]}`;
+}
+/** Accepts 2026-10-28, 28/10/2026 (UK order), 28-10-26, ISO timestamps, "Oct 28, 2026", "28 Oct 2026". */
+function parseDate(input) {
+  const s = String(input || '').trim();
+  if (!s) return '';
+  let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(s);
+  if (m) return iso(+m[1], +m[2], +m[3]);
+  m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/.exec(s);
+  if (m) { let y = +m[3]; if (y < 100) y += 2000; return iso(y, +m[2], +m[1]); }
+  const t = Date.parse(s.replace(/(\d)(st|nd|rd|th)\b/, '$1'));
+  if (!Number.isNaN(t)) { const d = new Date(t); return iso(d.getFullYear(), d.getMonth() + 1, d.getDate()); }
+  return '';
+  function iso(y, mo, d) {
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+    return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function safeFileName(s) { return String(s || '').replace(/[\\/:*?"<>|\s]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 80); }
+
+function toast(msg, type = '') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; }, 3200);
+  setTimeout(() => el.remove(), 3600);
+}
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+const nextFrame = () => new Promise(r => setTimeout(r, 0));
+
+/* =====================================================================
+   3. VAT engine – all money handled in whole pence
+   ===================================================================== */
+/**
+ * invoice = { invoiceNumber, invoiceDate (YYYY-MM-DD), orderId, channel, clientName, address, notes,
+ *             items: [{ description, qty, price, vatRate }], shipping, shippingVatRate, pricesIncVat }
+ * price/shipping are VAT-exclusive unless pricesIncVat is true.
+ */
+function calcLine(it, inc) {
+  const qty = numOr(it.qty, 0);
+  const unit = numOr(it.price, 0);
+  const rate = numOr(it.vatRate, 0);
+  let net, vat, gross;
+  if (inc) { gross = toPence(qty * unit); net = Math.round(gross * 100 / (100 + rate)); vat = gross - net; }
+  else { net = toPence(qty * unit); vat = Math.round(net * rate / 100); gross = net + vat; }
+  const unitNet = inc ? unit / (1 + rate / 100) : unit;
+  const unitGross = inc ? unit : unit * (1 + rate / 100);
+  return { description: String(it.description || '').trim(), qty, rate, unitNet, unitGross, net, vat, gross };
+}
+
+function calcInvoice(inv) {
+  const inc = !!inv.pricesIncVat;
+  const lines = (inv.items || [])
+    .filter(it => String(it.description || '').trim() || Number.isFinite(parseNum(it.price)))
+    .map(it => calcLine(it, inc));
+
+  const s = numOr(inv.shipping, 0);
+  const sRate = numOr(inv.shippingVatRate, 0);
+  let shipNet, shipVat;
+  if (inc) { const g = toPence(s); shipNet = Math.round(g * 100 / (100 + sRate)); shipVat = g - shipNet; }
+  else { shipNet = toPence(s); shipVat = Math.round(shipNet * sRate / 100); }
+
+  const vatByRate = new Map();
+  const addRate = (rate, net, vat) => {
+    const r = vatByRate.get(rate) || { rate, net: 0, vat: 0 };
+    r.net += net; r.vat += vat; vatByRate.set(rate, r);
+  };
+  lines.forEach(l => addRate(l.rate, l.net, l.vat));
+  if (shipNet) addRate(sRate, shipNet, shipVat);
+
+  const subtotal = lines.reduce((a, l) => a + l.net, 0);
+  const totalVat = lines.reduce((a, l) => a + l.vat, 0) + shipVat;
+  const total = subtotal + shipNet + totalVat;
+  const rates = [...vatByRate.values()].filter(r => r.net !== 0);
+  const vatLabel = rates.length === 1 ? `Total VAT (${pct(rates[0].rate)})`
+    : rates.length === 0 ? `Total VAT (${pct(numOr(inv.items?.[0]?.vatRate, settings.defaultVat))})` : 'Total VAT';
+  return { lines, subtotal, shipNet, shipVat, totalVat, total, vatLabel, vatRates: rates.sort((a, b) => b.rate - a.rate) };
+}
+
+function validateInvoice(inv) {
+  const problems = [];
+  if (!String(inv.invoiceNumber || '').trim()) problems.push('invoice number');
+  if (!inv.invoiceDate) problems.push('invoice date');
+  if (!String(inv.clientName || '').trim()) problems.push('client name');
+  const c = calcInvoice(inv);
+  if (!c.lines.length) problems.push('at least one item');
+  return problems;
+}
+
+/* =====================================================================
+   4. PDF renderer (jsPDF + AutoTable, A4 portrait, real selectable text)
+   ===================================================================== */
+const PDF = {
+  W: 210, H: 297, M: 15,
+  brand: [42, 131, 59], brandDark: [30, 98, 44], lime: [155, 187, 12],
+  ink: [27, 36, 30], muted: [98, 110, 102], line: [221, 228, 218], tint: [243, 247, 241], stripe: [249, 251, 248],
+};
+const hasAssets = () => !!(window.OP_ASSETS && OP_ASSETS.fontRegular);
+const FONT = () => (hasAssets() ? 'Roboto' : 'helvetica');
+
+function createDoc(title) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+  if (hasAssets()) {
+    doc.addFileToVFS('Roboto-Regular.ttf', OP_ASSETS.fontRegular);
+    doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+    doc.addFileToVFS('Roboto-Bold.ttf', OP_ASSETS.fontBold);
+    doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+  }
+  doc.setProperties({ title: title || 'Tax Invoice', author: COMPANY.name, subject: 'Tax Invoice', creator: `${COMPANY.store} Invoice Generator` });
+  return doc;
+}
+
+function setText(doc, style, size, color) {
+  doc.setFont(FONT(), style);
+  doc.setFontSize(size);
+  doc.setTextColor(...color);
+}
+
+function addressLines(address) {
+  return String(address || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+}
+
+/** Draws one invoice starting on the doc's current (blank) page. */
+function drawInvoice(doc, inv) {
+  const c = calcInvoice(inv);
+  const { W, H, M } = PDF;
+  const R = W - M;
+  const startPage = doc.getNumberOfPages();
+  const FOOTER_SPACE = 30;
+
+  // ---- Header: logo + title ----
+  let y = 14;
+  let logoH = 0;
+  if (hasAssets()) {
+    const lw = 56;
+    logoH = lw * OP_ASSETS.logoHeight / OP_ASSETS.logoWidth;
+    doc.addImage(OP_ASSETS.logoJpeg, 'JPEG', M - 1, y, lw, logoH, 'oplogo', 'FAST');
+  } else {
+    setText(doc, 'bold', 20, PDF.brand); doc.text(COMPANY.store, M, y + 8);
+    setText(doc, 'bold', 9, PDF.brand); doc.text(COMPANY.slogan, M, y + 13);
+    logoH = 14;
+  }
+  setText(doc, 'bold', 22, PDF.ink);
+  doc.text('TAX INVOICE', R, y + 8.5, { align: 'right' });
+  doc.setDrawColor(...PDF.lime); doc.setLineWidth(0.9);
+  doc.line(R - 16, y + 12, R, y + 12);
+  y += logoH + 9;
+
+  // ---- From (left) + invoice meta box (right) ----
+  const colTop = y;
+  setText(doc, 'bold', 7.5, PDF.brand);
+  doc.text('FROM', M, y, { charSpace: 0.4 });
+  y += 5.2;
+  setText(doc, 'bold', 10.5, PDF.ink);
+  doc.text(COMPANY.name, M, y); y += 4.8;
+  setText(doc, 'normal', 9, PDF.muted);
+  doc.text(`Trading as ${COMPANY.store}`, M, y); y += 4.3;
+  COMPANY.addressLines.forEach(l => { doc.text(l, M, y); y += 4.3; });
+  setText(doc, 'bold', 9, PDF.ink);
+  doc.text(`VAT No: ${COMPANY.vatNumber}`, M, y);
+  const leftBottom = y;
+
+  const meta = [
+    ['Invoice No.', inv.invoiceNumber || '—'],
+    ['Invoice Date', formatDateLong(inv.invoiceDate) || '—'],
+    ['Order ID', inv.orderId || '—'],
+  ];
+  if (inv.channel) meta.push(['Sales Channel', inv.channel]);
+  const bw = 84, bx = R - bw, rowH = 6.6, pad = 4.2;
+  const bh = pad * 2 + meta.length * rowH - 1.6;
+  const by = colTop - 4;
+  doc.setFillColor(...PDF.tint);
+  doc.roundedRect(bx, by, bw, bh, 2.2, 2.2, 'F');
+  doc.setFillColor(...PDF.brand);
+  doc.rect(bx, by + 2.2, 1.1, bh - 4.4, 'F');
+  meta.forEach(([label, value], i) => {
+    const ry = by + pad + 3.2 + i * rowH;
+    setText(doc, 'normal', 8.5, PDF.muted);
+    doc.text(label, bx + 5.5, ry);
+    setText(doc, 'bold', 9, i === 0 ? PDF.brandDark : PDF.ink);
+    const v = doc.splitTextToSize(String(value), bw - 34)[0];
+    doc.text(v, R - pad, ry, { align: 'right' });
+  });
+  y = Math.max(leftBottom, by + bh) + 7;
+
+  doc.setDrawColor(...PDF.line); doc.setLineWidth(0.3);
+  doc.line(M, y, R, y);
+  y += 7;
+
+  // ---- Bill to (left) + amount at a glance (right) ----
+  const billTop = y;
+  setText(doc, 'bold', 7.5, PDF.brand);
+  doc.text('BILL TO', M, y, { charSpace: 0.4 });
+  y += 5.4;
+  setText(doc, 'bold', 11, PDF.ink);
+  doc.splitTextToSize(String(inv.clientName || '—'), 100).forEach(l => { doc.text(l, M, y); y += 5; });
+  setText(doc, 'normal', 9.5, PDF.muted);
+  addressLines(inv.address).forEach(line => {
+    doc.splitTextToSize(line, 100).forEach(l => { doc.text(l, M, y); y += 4.5; });
+  });
+  const billBottom = y;
+
+  setText(doc, 'bold', 7.5, PDF.brand);
+  doc.text('TOTAL (VAT INCLUDED)', R, billTop, { align: 'right' });
+  setText(doc, 'bold', 20, PDF.ink);
+  doc.text(money(c.total), R, billTop + 9, { align: 'right' });
+  setText(doc, 'normal', 8.5, PDF.muted);
+  doc.text(`Including ${money(c.totalVat)} VAT · GBP`, R, billTop + 14, { align: 'right' });
+
+  y = Math.max(billBottom, billTop + 14) + 6;
+
+  // ---- Items table ----
+  const body = c.lines.length ? c.lines.map(l => [
+    l.description || '—',
+    (Math.round(l.qty * 1000) / 1000).toLocaleString('en-GB'),
+    moneyUnit(inv.pricesIncVat ? Math.round(l.unitNet * 100) / 100 : l.unitNet),
+    money(l.net),
+    pct(l.rate),
+    money(l.vat),
+    money(l.gross),
+  ]) : [[{ content: 'No items', colSpan: 7, styles: { halign: 'center', textColor: PDF.muted } }]];
+
+  const colAlign = ['left', 'center', 'right', 'right', 'center', 'right', 'right'];
+  doc.autoTable({
+    startY: y,
+    margin: { left: M, right: M, top: 24, bottom: FOOTER_SPACE },
+    head: [['Description', 'Qty', 'Unit Price\n(excl. VAT)', 'Amount in GBP\n(excl. VAT)', 'VAT\nRate', 'Tax Amount\n(VAT)', 'Amount in GBP\n(incl. VAT)']],
+    body,
+    theme: 'plain',
+    showHead: 'everyPage',
+    styles: {
+      font: FONT(), fontSize: 9, textColor: PDF.ink, valign: 'middle', overflow: 'linebreak',
+      cellPadding: { top: 3.2, bottom: 3.2, left: 2.4, right: 2.4 }, lineColor: PDF.line,
+    },
+    headStyles: { fillColor: PDF.brand, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.8, cellPadding: { top: 2.6, bottom: 2.6, left: 2.4, right: 2.4 } },
+    alternateRowStyles: { fillColor: PDF.stripe },
+    columnStyles: {
+      0: { cellWidth: 'auto' },
+      1: { cellWidth: 11, halign: 'center' },
+      2: { cellWidth: 21, halign: 'right' },
+      3: { cellWidth: 24, halign: 'right' },
+      4: { cellWidth: 12, halign: 'center' },
+      5: { cellWidth: 20, halign: 'right' },
+      6: { cellWidth: 25, halign: 'right', fontStyle: 'bold' },
+    },
+    didParseCell(data) {
+      if (data.section === 'head') data.cell.styles.halign = colAlign[data.column.index];
+    },
+    didDrawCell(data) {
+      if (data.section === 'body') {
+        doc.setDrawColor(...PDF.line); doc.setLineWidth(0.25);
+        doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+      }
+    },
+    didDrawPage() {
+      if (doc.getCurrentPageInfo().pageNumber > startPage) drawContinuationHeader(doc, inv);
+    },
+  });
+  y = doc.lastAutoTable.finalY + 7;
+
+  // ---- Totals (right) + VAT summary / notes (left) ----
+  const notes = String(inv.notes || '').trim();
+  const showVatSummary = c.vatRates.length > 1;
+  const noteLines = notes ? (setText(doc, 'normal', 9, PDF.ink), doc.splitTextToSize(notes, 82)) : [];
+  const leftH = (showVatSummary ? 8 + c.vatRates.length * 5 + 4 : 0) + (notes ? 7 + noteLines.length * 4.3 : 0);
+  const needed = Math.max(3 * 7.4 + 14, leftH) + 4;
+  if (y + needed > H - FOOTER_SPACE) {
+    doc.addPage();
+    drawContinuationHeader(doc, inv);
+    y = 28;
+  }
+
+  const tw = 88, tx = R - tw;
+  const rows = [
+    ['Subtotal (excl. VAT)', money(c.subtotal)],
+    ['Shipping (excl. VAT)', money(c.shipNet)],
+    [c.vatLabel, money(c.totalVat)],
+  ];
+  let ty = y;
+  rows.forEach(([label, value]) => {
+    setText(doc, 'normal', 9.2, PDF.muted);
+    doc.text(label, tx + 3, ty + 4.8);
+    setText(doc, 'bold', 9.5, PDF.ink);
+    doc.text(value, R - 3, ty + 4.8, { align: 'right' });
+    ty += 7.4;
+    doc.setDrawColor(...PDF.line); doc.setLineWidth(0.25);
+    doc.line(tx, ty, R, ty);
+  });
+  ty += 2.6;
+  doc.setFillColor(...PDF.brand);
+  doc.roundedRect(tx, ty, tw, 11.5, 2, 2, 'F');
+  setText(doc, 'bold', 9.8, [255, 255, 255]);
+  doc.text('Total Amount (VAT included)', tx + 3.5, ty + 7.3);
+  setText(doc, 'bold', 12.5, [255, 255, 255]);
+  doc.text(money(c.total), R - 3.5, ty + 7.6, { align: 'right' });
+
+  let ly = y + 2;
+  if (showVatSummary) {
+    setText(doc, 'bold', 7.5, PDF.brand);
+    doc.text('VAT SUMMARY', M, ly + 2, { charSpace: 0.4 });
+    ly += 7;
+    setText(doc, 'bold', 8, PDF.muted);
+    doc.text('Rate', M, ly); doc.text('Net', M + 45, ly, { align: 'right' }); doc.text('VAT', M + 72, ly, { align: 'right' });
+    ly += 5;
+    c.vatRates.forEach(r => {
+      setText(doc, 'normal', 8.8, PDF.ink);
+      doc.text(pct(r.rate), M, ly); doc.text(money(r.net), M + 45, ly, { align: 'right' }); doc.text(money(r.vat), M + 72, ly, { align: 'right' });
+      ly += 5;
+    });
+    ly += 3;
+  }
+  if (notes) {
+    setText(doc, 'bold', 7.5, PDF.brand);
+    doc.text('NOTES', M, ly + 2, { charSpace: 0.4 });
+    ly += 7;
+    setText(doc, 'normal', 9, PDF.ink);
+    noteLines.forEach(l => { doc.text(l, M, ly); ly += 4.3; });
+  }
+
+  // ---- Footer on every page of this invoice ----
+  const endPage = doc.getNumberOfPages();
+  const count = endPage - startPage + 1;
+  for (let p = startPage; p <= endPage; p++) {
+    doc.setPage(p);
+    doc.setDrawColor(...PDF.line); doc.setLineWidth(0.3);
+    doc.line(M, H - 24, R, H - 24);
+    setText(doc, 'bold', 11, PDF.brand);
+    doc.text('Thank you for your business!', W / 2, H - 16.5, { align: 'center' });
+    setText(doc, 'normal', 7.2, PDF.muted);
+    doc.text(`${COMPANY.name} t/a ${COMPANY.store} · ${COMPANY.addressLines.slice(0, 2).join(', ')} · VAT No. ${COMPANY.vatNumber}`, M, H - 9.5);
+    doc.text(`Page ${p - startPage + 1} of ${count}`, R, H - 9.5, { align: 'right' });
+  }
+  doc.setPage(endPage);
+}
+
+function drawContinuationHeader(doc, inv) {
+  const { M, W } = PDF;
+  setText(doc, 'bold', 10, PDF.ink);
+  doc.text(`${COMPANY.store} · Tax Invoice ${inv.invoiceNumber || ''}`, M, 14);
+  setText(doc, 'normal', 8.5, PDF.muted);
+  doc.text(`Order ${inv.orderId || '—'} · continued`, W - M, 14, { align: 'right' });
+  doc.setDrawColor(...PDF.line); doc.setLineWidth(0.3);
+  doc.line(M, 17.5, W - M, 17.5);
+}
+
+function buildPdf(invoices) {
+  const list = Array.isArray(invoices) ? invoices : [invoices];
+  const doc = createDoc(list.length === 1 ? `Tax Invoice ${list[0].invoiceNumber || ''}` : `${COMPANY.store} invoices`);
+  list.forEach((inv, i) => { if (i > 0) doc.addPage(); drawInvoice(doc, inv); });
+  return doc;
+}
+function pdfFileName(inv) {
+  const parts = ['Invoice', safeFileName(inv.invoiceNumber), inv.orderId ? 'Order-' + safeFileName(inv.orderId) : ''].filter(Boolean);
+  return parts.join('_') + '.pdf';
+}
+function librariesReady() {
+  if (window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API.autoTable) return true;
+  toast('The PDF library did not load. Keep the "lib" folder next to index.html, or connect to the internet once.', 'error');
+  return false;
+}
+
+/* =====================================================================
+   5. Live preview (shared by both modes)
+   ===================================================================== */
+const preview = {
+  url: null, timer: null, current: null,
+  schedule(inv, delay = 450) {
+    this.current = inv;
+    clearTimeout(this.timer);
+    $('#previewStatus').classList.add('busy');
+    $('#previewStatusText').textContent = 'Updating…';
+    this.timer = setTimeout(() => this.render(), delay);
+  },
+  render() {
+    const inv = this.current;
+    const frame = $('#previewFrame');
+    $('#previewStatus').classList.remove('busy');
+    if (!inv) {
+      frame.hidden = true; $('#previewEmpty').hidden = false;
+      $('#previewStatusText').textContent = 'A4 PDF';
+      return;
+    }
+    if (!(window.jspdf && window.jspdf.jsPDF.API.autoTable)) {
+      $('#previewEmptyText').textContent = 'PDF library not loaded – keep the "lib" folder next to index.html.';
+      return;
+    }
+    try {
+      const blob = buildPdf(inv).output('blob');
+      if (this.url) URL.revokeObjectURL(this.url);
+      this.url = URL.createObjectURL(blob);
+      frame.src = this.url + '#toolbar=0&navpanes=0&view=FitH';
+      frame.hidden = false; $('#previewEmpty').hidden = true;
+      $('#previewStatusText').textContent = `A4 PDF · ${Math.max(1, Math.round(blob.size / 1024))} KB`;
+    } catch (err) {
+      console.error(err);
+      $('#previewStatusText').textContent = 'Preview error';
+    }
+  },
+  openInTab() {
+    if (!this.current) return toast('Nothing to preview yet.');
+    if (!librariesReady()) return;
+    const url = URL.createObjectURL(buildPdf(this.current).output('blob'));
+    const w = window.open(url, '_blank');
+    if (!w) toast('Your browser blocked the new tab – allow pop-ups for this page.', 'error');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  },
+};
+
+/* =====================================================================
+   6. Mode A – Manual entry
+   ===================================================================== */
+let manual;
+let activeTab = 'manual';
+
+function newManualInvoice() {
+  return {
+    invoiceNumber: formatInvoiceNo(settings.nextNumber),
+    invoiceDate: todayISO(),
+    orderId: '', channel: '', clientName: '', address: '', notes: '',
+    items: [blankItem()],
+    shipping: '', shippingVatRate: settings.defaultVat,
+    pricesIncVat: false,
+  };
+}
+function blankItem() { return { description: '', qty: 1, price: '', vatRate: settings.defaultVat }; }
+
+const MANUAL_FIELDS = ['invoiceNumber', 'invoiceDate', 'orderId', 'channel', 'clientName', 'address', 'notes', 'shipping', 'shippingVatRate'];
+
+function fillChannelSelect(sel, value, emptyLabel) {
+  sel.innerHTML = `<option value="">${escapeHtml(emptyLabel)}</option>` +
+    CHANNELS.map(c => `<option>${escapeHtml(c)}</option>`).join('');
+  if (value && !CHANNELS.includes(value)) sel.insertAdjacentHTML('beforeend', `<option>${escapeHtml(value)}</option>`);
+  sel.value = value || '';
+}
+
+function loadManualIntoForm() {
+  fillChannelSelect($('#m-channel'), manual.channel, '— Not shown —');
+  MANUAL_FIELDS.forEach(f => { if (f !== 'channel') $('#m-' + f).value = manual[f] ?? ''; });
+  $$('#panel-manual .seg button').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.inc === '1') === manual.pricesIncVat)));
+  renderItems();
+  updateManual();
+}
+
+function renderItems() {
+  const wrap = $('#items');
+  wrap.innerHTML = '';
+  const label = manual.pricesIncVat ? 'incl. VAT' : 'excl. VAT';
+  manual.items.forEach((it, i) => {
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.dataset.index = i;
+    el.innerHTML = `
+      <div class="item-num">ITEM ${i + 1}</div>
+      <div class="item-grid">
+        <label class="field f-desc"><span>Description</span>
+          <input class="input" data-k="description" value="${escapeHtml(it.description)}" placeholder="e.g. Navigator A4 Paper 80gsm Box" autocomplete="off"></label>
+        <label class="field"><span>Qty</span>
+          <input class="input" data-k="qty" type="number" min="0" step="1" inputmode="decimal" value="${escapeHtml(it.qty)}"></label>
+        <label class="field"><span>Unit price <em>(${label})</em></span>
+          <div class="input-affix"><span class="affix pre">£</span>
+          <input class="input has-pre" data-k="price" type="number" step="0.01" inputmode="decimal" value="${escapeHtml(it.price)}" placeholder="0.00"></div></label>
+        <label class="field"><span>VAT rate</span>
+          <div class="input-affix"><input class="input has-post" data-k="vatRate" type="number" min="0" max="100" step="0.5" list="vatRates" inputmode="decimal" value="${escapeHtml(it.vatRate)}"><span class="affix post">%</span></div></label>
+        <div class="f-del"><button class="btn icon ghost danger" type="button" data-remove title="Remove item" aria-label="Remove item ${i + 1}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        </button></div>
+      </div>
+      <div class="item-calc" data-calc></div>`;
+    wrap.appendChild(el);
+  });
+}
+
+function updateManual() {
+  const c = calcInvoice(manual);
+  $$('#items .item').forEach(el => {
+    const l = calcLine(manual.items[+el.dataset.index], manual.pricesIncVat);
+    el.querySelector('[data-calc]').innerHTML =
+      `<span>Net <b>${money(l.net)}</b></span><span>VAT <b>${money(l.vat)}</b></span><span>Unit incl. VAT <b>${moneyUnit(manual.pricesIncVat ? l.unitGross : Math.round(l.unitGross * 100) / 100)}</b></span><span class="line-total">Line total incl. VAT <b>${money(l.gross)}</b></span>`;
+  });
+  $('#m-totals').innerHTML = `
+    <div class="row"><span>Subtotal (excl. VAT)</span><b>${money(c.subtotal)}</b></div>
+    <div class="row"><span>Shipping (excl. VAT)</span><b>${money(c.shipNet)}</b></div>
+    <div class="row"><span>${escapeHtml(c.vatLabel)}</span><b>${money(c.totalVat)}</b></div>
+    <div class="grand"><span>Total (VAT incl.)</span><b>${money(c.total)}</b></div>`;
+  $('#shipLabel').innerHTML = `Shipping price <em>(${manual.pricesIncVat ? 'incl.' : 'excl.'} VAT)</em>`;
+  const problems = validateInvoice(manual);
+  $('#m-validation').textContent = problems.length ? 'Still needed: ' + problems.join(', ') + '.' : 'Ready to download.';
+  manual.downloaded = false;
+  store.set('draft', manual);
+  if (activeTab === 'manual') preview.schedule(manual);
+}
+
+function bindManual() {
+  MANUAL_FIELDS.forEach(f => {
+    const el = $('#m-' + f);
+    el.addEventListener('input', () => { manual[f] = el.value; el.classList.remove('invalid'); updateManual(); });
+  });
+  $('#m-channel').addEventListener('change', e => { manual.channel = e.target.value; updateManual(); });
+
+  $('#items').addEventListener('input', e => {
+    const k = e.target.dataset.k;
+    if (!k) return;
+    const i = +e.target.closest('.item').dataset.index;
+    manual.items[i][k] = e.target.value;
+    e.target.classList.remove('invalid');
+    updateManual();
+  });
+  $('#items').addEventListener('click', e => {
+    if (!e.target.closest('[data-remove]')) return;
+    const i = +e.target.closest('.item').dataset.index;
+    manual.items.splice(i, 1);
+    if (!manual.items.length) manual.items.push(blankItem());
+    renderItems(); updateManual();
+  });
+  $('#addItemBtn').addEventListener('click', () => {
+    manual.items.push(blankItem());
+    renderItems(); updateManual();
+    $$('#items .item').pop().querySelector('[data-k="description"]').focus();
+  });
+  $$('#panel-manual .seg button').forEach(b => b.addEventListener('click', () => {
+    manual.pricesIncVat = b.dataset.inc === '1';
+    $$('#panel-manual .seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    renderItems(); updateManual();
+  }));
+  $('#nextNoBtn').addEventListener('click', () => {
+    manual.invoiceNumber = formatInvoiceNo(settings.nextNumber);
+    $('#m-invoiceNumber').value = manual.invoiceNumber;
+    updateManual();
+  });
+  $('#newInvoiceBtn').addEventListener('click', () => {
+    const dirty = manual.clientName || manual.orderId || manual.items.some(i => i.description || i.price);
+    if (dirty && !confirm('Clear the form and start a new invoice?')) return;
+    manual = newManualInvoice();
+    loadManualIntoForm();
+    $('#m-orderId').focus();
+  });
+  $('#m-downloadBtn').addEventListener('click', () => downloadManual());
+  $('#m-printBtn').addEventListener('click', () => preview.openInTab());
+}
+
+function downloadManual() {
+  if (!librariesReady()) return;
+  const problems = validateInvoice(manual);
+  if (problems.length) {
+    if (!String(manual.invoiceNumber || '').trim()) $('#m-invoiceNumber').classList.add('invalid');
+    if (!manual.invoiceDate) $('#m-invoiceDate').classList.add('invalid');
+    if (!String(manual.clientName || '').trim()) $('#m-clientName').classList.add('invalid');
+    if (!calcInvoice(manual).lines.length) $('#items [data-k="description"]')?.classList.add('invalid');
+    toast('Please add: ' + problems.join(', '), 'error');
+    return;
+  }
+  downloadBlob(buildPdf(manual).output('blob'), pdfFileName(manual));
+  if (manual.invoiceNumber === formatInvoiceNo(settings.nextNumber)) commitInvoiceNo(settings.nextNumber);
+  // Remember it was downloaded, so a page reload starts a fresh invoice instead of reusing this number.
+  manual.downloaded = true;
+  store.set('draft', manual);
+  toast(`Saved ${pdfFileName(manual)}`);
+}
+
+/* =====================================================================
+   7. Mode B – CSV bulk upload
+   ===================================================================== */
+
+/** RFC 4180 CSV parser: quoted fields, "" escapes, commas/newlines inside quotes, CRLF/LF/CR. */
+function parseCSV(text, delimiter) {
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += ch;
+      continue;
+    }
+    if (ch === '"' && field.trim() === '') { inQuotes = true; field = ''; }
+    else if (ch === delimiter) { row.push(field); field = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); rows.push(row); row = []; field = '';
+    } else field += ch;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+/** Picks the delimiter that appears most often (outside quotes) in the first non-empty line. */
+function detectDelimiter(text) {
+  const line = text.split(/\r?\n/).find(l => l.trim()) || '';
+  let best = ',', bestCount = 0;
+  for (const d of [',', ';', '\t', '|']) {
+    let count = 0, q = false;
+    for (const ch of line) { if (ch === '"') q = !q; else if (!q && ch === d) count++; }
+    if (count > bestCount) { best = d; bestCount = count; }
+  }
+  return best;
+}
+
+/** Column names recognised for each field (compared lower-case with spaces/punctuation removed). */
+const CSV_FIELDS = {
+  orderId: { label: 'Order ID', required: true, aliases: ['orderid', 'ordernumber', 'orderno', 'order', 'amazonorderid', 'ordernum', 'orderref', 'orderreference', 'purchaseorderid', 'salesrecordnumber'] },
+  customerName: { label: 'Customer Name', required: true, aliases: ['customername', 'customer', 'clientname', 'client', 'name', 'fullname', 'buyername', 'buyerfullname', 'billingname', 'billtoname', 'recipientname', 'recipient', 'shiptoname', 'shipname', 'shippingname', 'deliveryname', 'posttoname', 'buyer'] },
+  address: { label: 'Address', required: true, aliases: ['address', 'billingaddress', 'shippingaddress', 'deliveryaddress', 'fulladdress', 'address1', 'addressline1', 'shipaddress1', 'shipaddress', 'shiptoaddress1', 'shiptoaddress', 'street', 'streetaddress', 'billingaddress1', 'shippingaddress1', 'detailaddress', 'billingstreet', 'shippingstreet', 'posttoaddress1', 'buyeraddress1', 'recipientaddress'] },
+  item: { label: 'Item', required: true, aliases: ['item', 'items', 'itemdescription', 'description', 'itemname', 'itemtitle', 'title', 'product', 'productname', 'producttitle', 'lineitemname', 'listingtitle'] },
+  qty: { label: 'Qty', required: true, aliases: ['qty', 'quantity', 'quantitypurchased', 'quantityordered', 'units', 'lineitemquantity', 'qtyordered'] },
+  price: { label: 'Price', required: true, aliases: ['price', 'unitprice', 'priceperunit', 'itemunitprice', 'soldfor', 'saleprice', 'lineitemprice', 'unitcost', 'priceeach', 'skuunitoriginalprice', 'itemunitpriceinclvat'] },
+  shipping: { label: 'Shipping', required: true, aliases: ['shipping', 'shippingprice', 'shippingcost', 'shippingfee', 'shippingcharge', 'postage', 'postageandpackaging', 'pandp', 'delivery', 'deliverycharge', 'deliverycost', 'shippingandhandling', 'shippingtotal', 'ordershipping', 'shippingfeeafterdiscount', 'originalshippingfee', 'deliveryfee'] },
+  lineTotal: { label: 'Line Total', aliases: ['linetotal', 'itemtotal', 'itemprice', 'total', 'subtotal', 'linesubtotal', 'amount', 'skusubtotalafterdiscount'] },
+  vatRate: { label: 'VAT Rate', aliases: ['vatrate', 'vatpercent', 'vatpercentage', 'taxrate', 'taxpercent'] },
+  invoiceNumber: { label: 'Invoice Number', aliases: ['invoicenumber', 'invoiceno', 'invoice', 'invoiceid'] },
+  invoiceDate: { label: 'Invoice Date', aliases: ['invoicedate', 'orderdate', 'date', 'purchasedate', 'saledate', 'paiddate', 'paymentdate', 'createdat', 'datepaid', 'ordercreatedtime'] },
+  channel: { label: 'Channel', aliases: ['channel', 'saleschannel', 'platform', 'marketplace', 'source', 'store'] },
+  notes: { label: 'Notes', aliases: ['notes', 'note', 'invoicenote', 'comments'] },
+  address2: { label: 'Address 2', aliases: ['address2', 'addressline2', 'shipaddress2', 'shiptoaddress2', 'billingaddress2', 'shippingaddress2', 'address3', 'addressline3', 'shipaddress3', 'posttoaddress2', 'buyeraddress2'] },
+  city: { label: 'City', aliases: ['city', 'town', 'towncity', 'shipcity', 'shiptocity', 'billingcity', 'shippingcity', 'posttocity', 'buyercity', 'posttown'] },
+  county: { label: 'County', aliases: ['county', 'state', 'region', 'province', 'shipstate', 'shiptostate', 'shiptocounty', 'billingstate', 'shippingcounty', 'posttocounty', 'buyercounty'] },
+  postcode: { label: 'Postcode', aliases: ['postcode', 'postalcode', 'zip', 'zipcode', 'shippostalcode', 'shiptopostcode', 'shiptozip', 'shipzipcode', 'shipzip', 'billingpostcode', 'billingzip', 'shippingpostcode', 'shippingzip', 'posttopostcode', 'buyerpostcode'] },
+  country: { label: 'Country', aliases: ['country', 'shipcountry', 'shiptocountry', 'billingcountry', 'shippingcountry', 'posttocountry', 'buyercountry'] },
+};
+const normHeader = (h) => String(h || '').replace(/^﻿/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+function mapHeaders(headers) {
+  const map = {};
+  headers.forEach((h, idx) => {
+    const n = normHeader(h);
+    if (!n) return;
+    for (const [field, def] of Object.entries(CSV_FIELDS)) {
+      if (map[field] === undefined && def.aliases.includes(n)) { map[field] = idx; break; }
+    }
+  });
+  return map;
+}
+
+/** Turns parsed rows into invoices. Rows sharing an Order ID become one multi-item invoice. */
+function rowsToOrders(rows, map, opts) {
+  const orders = [];
+  const byId = new Map();
+  let last = null;
+  let autoN = opts.baseN;
+  const get = (r, f) => (map[f] === undefined ? '' : String(r[map[f]] ?? '').trim());
+
+  rows.forEach((r, rowIdx) => {
+    if (!r.some(c => String(c).trim())) return;
+    const line = rowIdx + opts.firstDataLine;
+    const id = get(r, 'orderId');
+    let order;
+    if (!id) {
+      if (!last) { opts.globalWarnings.push(`Row ${line}: no Order ID – skipped.`); return; }
+      order = last;
+    } else if (byId.has(id)) {
+      order = byId.get(id);
+    } else {
+      order = {
+        orderId: id, invoiceNumber: '', autoN: null, invoiceDate: '', channel: '', clientName: '', address: '', notes: '',
+        items: [], shipping: 0, shippingSet: false, shippingVatRate: settings.defaultVat, pricesIncVat: opts.incVat,
+        warnings: [], firstLine: line,
+      };
+      byId.set(id, order);
+      orders.push(order);
+    }
+    last = order;
+
+    // order-level fields: the first non-blank value wins
+    if (!order.clientName) order.clientName = get(r, 'customerName');
+    if (!order.address) order.address = buildAddress(r, get);
+    if (!order.invoiceNumber) order.invoiceNumber = get(r, 'invoiceNumber');
+    if (!order.notes) order.notes = get(r, 'notes');
+    if (!order.channel) order.channel = normaliseChannel(get(r, 'channel'));
+    if (!order.invoiceDate && get(r, 'invoiceDate')) {
+      order.invoiceDate = parseDate(get(r, 'invoiceDate'));
+      if (!order.invoiceDate) order.warnings.push(`Row ${line}: date "${get(r, 'invoiceDate')}" not understood – used today.`);
+    }
+
+    const shipRaw = get(r, 'shipping');
+    if (shipRaw !== '') {
+      const v = parseNum(shipRaw);
+      if (!Number.isFinite(v)) order.warnings.push(`Row ${line}: shipping "${shipRaw}" is not a number – ignored.`);
+      else if (opts.shipMode === 'line') { order.shipping = Math.round((order.shipping + v) * 10000) / 10000; order.shippingSet = true; }
+      else if (!order.shippingSet) { order.shipping = v; order.shippingSet = true; }
+      else if (v !== order.shipping && v !== 0) order.warnings.push(`Row ${line}: different shipping (${shipRaw}) on a later row – only the first value is used. Switch "Shipping column" to "Per item row" if each row has its own charge.`);
+    }
+
+    const desc = get(r, 'item');
+    const qtyRaw = get(r, 'qty'), priceRaw = get(r, 'price'), totalRaw = get(r, 'lineTotal'), vatRaw = get(r, 'vatRate');
+    if (!desc && !priceRaw && !totalRaw) return;
+    let qty = qtyRaw === '' ? 1 : parseNum(qtyRaw);
+    if (!Number.isFinite(qty)) { order.warnings.push(`Row ${line}: quantity "${qtyRaw}" is not a number – used 1.`); qty = 1; }
+    let price = parseNum(priceRaw);
+    if (!Number.isFinite(price)) {
+      const total = parseNum(totalRaw);
+      if (Number.isFinite(total) && qty) price = total / qty;
+      else { order.warnings.push(`Row ${line}: price "${priceRaw || totalRaw}" is not a number – used £0.00.`); price = 0; }
+    }
+    let rate = vatRaw === '' ? settings.defaultVat : parseNum(vatRaw);
+    if (Number.isFinite(rate) && rate > 0 && rate < 1) rate = Math.round(rate * 10000) / 100; // 0.2 -> 20
+    if (!Number.isFinite(rate)) { order.warnings.push(`Row ${line}: VAT rate "${vatRaw}" not understood – used ${settings.defaultVat}%.`); rate = settings.defaultVat; }
+    if (!desc) order.warnings.push(`Row ${line}: item has no description.`);
+    order.items.push({ description: desc, qty, price, vatRate: rate });
+  });
+
+  orders.forEach(o => {
+    if (!o.invoiceNumber) { o.autoN = autoN++; o.invoiceNumber = formatInvoiceNo(o.autoN); }
+    if (!o.invoiceDate) o.invoiceDate = todayISO();
+    if (!o.channel) o.channel = opts.channel || '';
+    if (!o.clientName) o.warnings.push('No customer name.');
+    if (!o.address) o.warnings.push('No address.');
+    if (!o.items.length) o.warnings.push('No items.');
+    // Shipping VAT follows the goods: use the rate of the first item.
+    if (o.items.length) o.shippingVatRate = o.items[0].vatRate;
+  });
+  return orders;
+}
+
+function buildAddress(r, get) {
+  const base = get(r, 'address');
+  let lines = base.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  if (lines.length === 1 && lines[0].includes(',')) lines = lines[0].split(',').map(s => s.trim()).filter(Boolean);
+  const joined = lines.join(' ').toLowerCase();
+  ['address2', 'city', 'county', 'postcode', 'country'].forEach(f => {
+    const v = get(r, f);
+    if (v && !joined.includes(v.toLowerCase())) lines.push(v);
+  });
+  return lines.join('\n');
+}
+
+function normaliseChannel(v) {
+  const n = String(v || '').toLowerCase().replace(/[^a-z]/g, '');
+  if (!n) return v || '';
+  const hit = CHANNELS.find(c => { const cn = c.toLowerCase().replace(/[^a-z]/g, ''); return n === cn || n.startsWith(cn) || cn.startsWith(n); });
+  return hit || v;
+}
+
+const bulk = { rows: null, map: null, firstDataLine: 2, fileName: '', baseN: 1, orders: [], index: 0, globalWarnings: [] };
+
+async function readFileText(file) {
+  const buf = await file.arrayBuffer();
+  let text = new TextDecoder('utf-8').decode(buf);
+  // Excel on Windows often saves CSV as Windows-1252, which breaks "£" – fall back if UTF-8 fails.
+  if (text.includes('�')) text = new TextDecoder('windows-1252').decode(buf);
+  return text.replace(/^﻿/, '');
+}
+
+async function handleCsvFile(file) {
+  if (!file) return;
+  const msgs = $('#csvMessages');
+  msgs.innerHTML = '';
+  try {
+    const text = await readFileText(file);
+    // The header row is the first of the top 10 rows that names an Order ID and an Item column.
+    // Try the most likely delimiter first, then the others (some exports start with a title line).
+    let rows = [], headerIdx = -1, map = null;
+    const first = detectDelimiter(text);
+    for (const d of [first, ...[',', '\t', ';', '|'].filter(x => x !== first)]) {
+      const parsed = parseCSV(text, d);
+      for (let i = 0; i < Math.min(10, parsed.length); i++) {
+        const m = mapHeaders(parsed[i]);
+        if (m.orderId !== undefined && m.item !== undefined) { rows = parsed; headerIdx = i; map = m; break; }
+      }
+      if (headerIdx >= 0) break;
+      if (d === first) rows = parsed;
+    }
+    if (headerIdx < 0) {
+      const found = (rows[0] || []).filter(Boolean).map(h => `<code>${escapeHtml(h)}</code>`).join(', ') || 'none';
+      showCsvError(`Could not find the header row. The CSV needs at least an <b>Order ID</b> and an <b>Item</b> column.<br>Columns found: ${found}`);
+      return;
+    }
+    const missing = Object.entries(CSV_FIELDS)
+      .filter(([f, d]) => d.required && map[f] === undefined && !(f === 'price' && map.lineTotal !== undefined))
+      .map(([, d]) => d.label);
+    Object.assign(bulk, {
+      rows: rows.slice(headerIdx + 1), map, firstDataLine: headerIdx + 2, fileName: file.name,
+      baseN: settings.nextNumber, index: 0,
+    });
+    $('#fileName').hidden = false;
+    $('#fileName').textContent = `${file.name} · ${bulk.rows.filter(r => r.some(c => String(c).trim())).length} rows`;
+    rebuildOrders();
+    if (missing.length) {
+      msgs.insertAdjacentHTML('afterbegin', alertHtml('warn', `Columns not found: <b>${missing.map(escapeHtml).join(', ')}</b>. Those values will be blank (shipping defaults to £0.00).`));
+    }
+    if (bulk.orders.length) toast(`Loaded ${bulk.orders.length} order${bulk.orders.length === 1 ? '' : 's'} from ${file.name}`);
+  } catch (err) {
+    console.error(err);
+    showCsvError('Could not read that file: ' + escapeHtml(err.message));
+  }
+}
+
+function rebuildOrders() {
+  if (!bulk.rows) return;
+  bulk.globalWarnings = [];
+  bulk.orders = rowsToOrders(bulk.rows, bulk.map, {
+    baseN: bulk.baseN, incVat: settings.csvIncVat, shipMode: settings.csvShipMode, channel: settings.csvChannel,
+    firstDataLine: bulk.firstDataLine, globalWarnings: bulk.globalWarnings,
+  });
+  bulk.index = Math.min(bulk.index, Math.max(0, bulk.orders.length - 1));
+  renderBulk();
+}
+
+function alertHtml(type, html) {
+  const icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
+  return `<div class="alert ${type === 'error' ? 'error' : ''}">${icon}<div>${html}</div></div>`;
+}
+function showCsvError(html) {
+  $('#csvMessages').innerHTML = alertHtml('error', html);
+  $('#bulkResults').hidden = true;
+  bulk.orders = []; bulk.rows = null;
+  if (activeTab === 'bulk') preview.schedule(null, 0);
+}
+
+function renderBulk() {
+  const has = bulk.orders.length > 0;
+  $('#bulkResults').hidden = !has;
+  const msgs = $('#csvMessages');
+  msgs.querySelectorAll('[data-gw]').forEach(n => n.remove());
+  if (bulk.globalWarnings.length) {
+    msgs.insertAdjacentHTML('beforeend', `<div data-gw>${alertHtml('warn', `<ul>${bulk.globalWarnings.slice(0, 8).map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul>`)}</div>`);
+  }
+  if (!has) {
+    if (bulk.rows) msgs.insertAdjacentHTML('beforeend', `<div data-gw>${alertHtml('error', 'No orders found in the file.')}</div>`);
+    if (activeTab === 'bulk') preview.schedule(null, 0);
+    return;
+  }
+  let grand = 0, vat = 0, lines = 0, warnCount = 0;
+  const body = bulk.orders.map((o, i) => {
+    const c = calcInvoice(o);
+    grand += c.total; vat += c.totalVat; lines += o.items.length;
+    if (o.warnings.length) warnCount++;
+    const status = o.warnings.length
+      ? `<span class="badge warn" title="${escapeHtml(o.warnings.join('\n'))}">⚠ ${o.warnings.length}</span>`
+      : '<span class="badge ok">OK</span>';
+    return `<tr data-i="${i}" class="${i === bulk.index ? 'sel' : ''}">
+      <td>${i + 1}</td>
+      <td class="mono">${escapeHtml(o.orderId)}</td>
+      <td class="cust" title="${escapeHtml(o.clientName)}">${escapeHtml(o.clientName || '—')}</td>
+      <td>${o.items.length}</td>
+      <td class="num">${money(c.total)}</td>
+      <td class="mono">${escapeHtml(o.invoiceNumber)}</td>
+      <td>${status}</td></tr>`;
+  }).join('');
+  $('#ordersBody').innerHTML = body;
+  $('#bulkStats').innerHTML = `
+    <div class="stat"><span>Orders</span><b>${bulk.orders.length}</b></div>
+    <div class="stat"><span>Item lines</span><b>${lines}</b></div>
+    <div class="stat"><span>Total VAT</span><b>${money(vat)}</b></div>
+    <div class="stat"><span>Grand total</span><b>${money(grand)}</b></div>
+    <div class="stat"><span>Need checking</span><b style="color:${warnCount ? 'var(--warn)' : 'var(--brand)'}">${warnCount}</b></div>`;
+  selectOrder(bulk.index, false);
+}
+
+function selectOrder(i, scroll = true) {
+  if (!bulk.orders.length) return;
+  bulk.index = (i + bulk.orders.length) % bulk.orders.length;
+  $$('#ordersBody tr').forEach(tr => tr.classList.toggle('sel', +tr.dataset.i === bulk.index));
+  const o = bulk.orders[bulk.index];
+  $('#navPos').textContent = `Order ${bulk.index + 1} of ${bulk.orders.length}`;
+  const old = $('#orderWarnings');
+  if (old) old.remove();
+  if (o.warnings.length) {
+    $('#bulkStats').insertAdjacentHTML('afterend', `<div id="orderWarnings">${alertHtml('warn', `<b>Order ${escapeHtml(o.orderId)}</b><ul>${o.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul>`)}</div>`);
+  }
+  if (scroll) $(`#ordersBody tr[data-i="${bulk.index}"]`)?.scrollIntoView({ block: 'nearest' });
+  if (activeTab === 'bulk') preview.schedule(o, 120);
+}
+
+function commitBulkNumbers(orders) {
+  const used = orders.map(o => o.autoN).filter(n => n != null);
+  if (used.length) commitInvoiceNo(Math.max(...used));
+}
+
+async function runBulk(kind) {
+  if (!bulk.orders.length || !librariesReady()) return;
+  const btns = ['#dlZipBtn', '#dlMergedBtn', '#dlOneBtn'].map(s => $(s));
+  btns.forEach(b => (b.disabled = true));
+  const bar = $('#bulkProgress');
+  const fill = bar.querySelector('i');
+  bar.hidden = false; fill.style.width = '0%';
+  const stamp = todayISO();
+  try {
+    if (kind === 'zip') {
+      if (!window.JSZip) throw new Error('ZIP library not loaded');
+      const zip = new JSZip();
+      const names = new Set();
+      for (let i = 0; i < bulk.orders.length; i++) {
+        const o = bulk.orders[i];
+        let name = pdfFileName(o);
+        for (let n = 2; names.has(name); n++) name = pdfFileName(o).replace(/\.pdf$/, `_${n}.pdf`);
+        names.add(name);
+        zip.file(name, buildPdf(o).output('arraybuffer'));
+        fill.style.width = `${Math.round(((i + 1) / bulk.orders.length) * 90)}%`;
+        await nextFrame();
+      }
+      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' }, m => { fill.style.width = `${90 + m.percent / 10}%`; });
+      downloadBlob(blob, `Office-Point-Invoices_${stamp}.zip`);
+      commitBulkNumbers(bulk.orders);
+      toast(`Downloaded ${bulk.orders.length} invoices as a ZIP`);
+    } else if (kind === 'merged') {
+      await nextFrame();
+      const doc = buildPdf(bulk.orders);
+      fill.style.width = '100%';
+      downloadBlob(doc.output('blob'), `Office-Point-Invoices_${stamp}.pdf`);
+      commitBulkNumbers(bulk.orders);
+      toast(`Downloaded ${bulk.orders.length} invoices in one PDF`);
+    } else {
+      const o = bulk.orders[bulk.index];
+      downloadBlob(buildPdf(o).output('blob'), pdfFileName(o));
+      commitBulkNumbers([o]);
+      fill.style.width = '100%';
+      toast(`Saved ${pdfFileName(o)}`);
+    }
+  } catch (err) {
+    console.error(err);
+    toast('Download failed: ' + err.message, 'error');
+  } finally {
+    btns.forEach(b => (b.disabled = false));
+    setTimeout(() => { bar.hidden = true; }, 600);
+  }
+}
+
+const SAMPLE_CSV = [
+  'Order ID,Customer Name,Address,Item,Qty,Price,Shipping,VAT Rate,Invoice Date,Channel',
+  '84724,Khia Mistry,"83 Baker Street, London, W1U 6AG, United Kingdom",Navigator Universal A4 Paper 80gsm Box (5 Reams),8,23.90,0,20,2026-10-27,Amazon',
+  '85069,Matt Mela (Boulevard Brasserie),"40 Wellington St, London, WC2E 7BD, United Kingdom",Color Copy A3 Printer Paper 250gsm Ream - 125 Sheets,20,14.574,4.99,20,2026-10-27,eBay',
+  '85070,Jane Doe,"Flat 2, 12 High Street, Reading, RG1 2AB, United Kingdom",HP 305 Black Original Ink Cartridge,2,12.49,3.95,20,2026-10-28,TikTok Shop',
+  '85070,Jane Doe,"Flat 2, 12 High Street, Reading, RG1 2AB, United Kingdom",Pukka Pad A4 Refill Pad 400 Pages,3,4.15,,20,2026-10-28,TikTok Shop',
+  '85071,Acme Dental Ltd,"Suite 4, The Courtyard, Bristol, BS1 4DJ, United Kingdom",Fellowes Shredder Oil 350ml,1,6.66,2.49,20,28/10/2026,Etsy',
+].join('\r\n') + '\r\n';
+
+function bindBulk() {
+  const input = $('#csvInput');
+  const drop = $('#drop');
+  drop.addEventListener('click', () => input.click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+  input.addEventListener('change', () => { handleCsvFile(input.files[0]); input.value = ''; });
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => handleCsvFile(e.dataTransfer.files[0]));
+
+  $('#sampleCsvBtn').addEventListener('click', () => downloadBlob(new Blob([SAMPLE_CSV], { type: 'text/csv' }), 'office-point-sample-orders.csv'));
+
+  const setSeg = (sel, attr, val) => $$(sel + ' button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === val)));
+  setSeg('#csvIncSeg', 'inc', settings.csvIncVat ? '1' : '0');
+  setSeg('#csvShipSeg', 'ship', settings.csvShipMode);
+  $$('#csvIncSeg button').forEach(b => b.addEventListener('click', () => {
+    settings.csvIncVat = b.dataset.inc === '1'; saveSettings(); setSeg('#csvIncSeg', 'inc', b.dataset.inc); rebuildOrders();
+  }));
+  $$('#csvShipSeg button').forEach(b => b.addEventListener('click', () => {
+    settings.csvShipMode = b.dataset.ship; saveSettings(); setSeg('#csvShipSeg', 'ship', b.dataset.ship); rebuildOrders();
+  }));
+  fillChannelSelect($('#csvChannel'), settings.csvChannel, '— Not shown —');
+  $('#csvChannel').addEventListener('change', e => { settings.csvChannel = e.target.value; saveSettings(); rebuildOrders(); });
+
+  $('#ordersBody').addEventListener('click', e => { const tr = e.target.closest('tr'); if (tr) selectOrder(+tr.dataset.i, false); });
+  $('#prevBtn').addEventListener('click', () => selectOrder(bulk.index - 1));
+  $('#nextBtn').addEventListener('click', () => selectOrder(bulk.index + 1));
+  document.addEventListener('keydown', e => {
+    if (activeTab !== 'bulk' || !bulk.orders.length || e.target.closest('input, textarea, select, dialog')) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); selectOrder(bulk.index - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); selectOrder(bulk.index + 1); }
+  });
+  $('#dlZipBtn').addEventListener('click', () => runBulk('zip'));
+  $('#dlMergedBtn').addEventListener('click', () => runBulk('merged'));
+  $('#dlOneBtn').addEventListener('click', () => runBulk('one'));
+  $('#editInManualBtn').addEventListener('click', () => {
+    const o = bulk.orders[bulk.index];
+    if (!o) return;
+    manual = {
+      invoiceNumber: o.invoiceNumber, invoiceDate: o.invoiceDate, orderId: o.orderId, channel: o.channel,
+      clientName: o.clientName, address: o.address, notes: o.notes,
+      items: o.items.map(it => ({ ...it })), shipping: o.shipping || '', shippingVatRate: o.shippingVatRate, pricesIncVat: o.pricesIncVat,
+    };
+    commitBulkNumbers([o]);
+    switchTab('manual');
+    loadManualIntoForm();
+    toast(`Order ${o.orderId} copied to Manual entry`);
+  });
+
+  const chip = (d) => `<span class="chip ${d.required ? 'req' : ''}">${escapeHtml(d.label)}</span>`;
+  $('#reqCols').innerHTML = Object.values(CSV_FIELDS).filter(d => d.required).map(chip).join('');
+  $('#optCols').innerHTML = Object.values(CSV_FIELDS).filter(d => !d.required).map(chip).join('');
+}
+
+/* =====================================================================
+   8. Tabs, theme, settings, start-up
+   ===================================================================== */
+function switchTab(tab) {
+  activeTab = tab;
+  $$('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === tab)));
+  $('#panel-manual').hidden = tab !== 'manual';
+  $('#panel-bulk').hidden = tab !== 'bulk';
+  store.set('tab', tab);
+  if (tab === 'manual') preview.schedule(manual, 0);
+  else {
+    $('#previewEmptyText').textContent = 'Upload a CSV to preview each invoice here.';
+    preview.schedule(bulk.orders[bulk.index] || null, 0);
+  }
+}
+
+function applyTheme(theme) {
+  if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+  else delete document.documentElement.dataset.theme;
+  $('#themeLabel').textContent = theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'Auto';
+}
+
+function bindChrome() {
+  $$('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+  $('.tabs').addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const next = activeTab === 'manual' ? 'bulk' : 'manual';
+    switchTab(next); $(`#tab-${next}`).focus();
+  });
+
+  let theme = store.get('theme', 'auto');
+  applyTheme(theme);
+  $('#themeBtn').addEventListener('click', () => {
+    theme = { auto: 'light', light: 'dark', dark: 'auto' }[theme] || 'auto';
+    store.set('theme', theme); applyTheme(theme);
+  });
+
+  const dlg = $('#settingsDlg');
+  const draftSettings = () => ({ prefix: $('#s-prefix').value, pad: +$('#s-pad').value || 1 });
+  const refresh = () => { $('#s-preview').textContent = formatInvoiceNo(Math.max(1, Math.floor(+$('#s-next').value || 1)), draftSettings()); };
+  $('#settingsBtn').addEventListener('click', () => {
+    $('#s-prefix').value = settings.prefix; $('#s-next').value = settings.nextNumber;
+    $('#s-pad').value = settings.pad; $('#s-vat').value = settings.defaultVat;
+    refresh();
+    dlg.showModal();
+  });
+  ['#s-prefix', '#s-next', '#s-pad'].forEach(s => $(s).addEventListener('input', refresh));
+  dlg.addEventListener('close', () => {
+    if (dlg.returnValue !== 'save') return;
+    const wasNext = formatInvoiceNo(settings.nextNumber);
+    settings.prefix = $('#s-prefix').value;
+    settings.nextNumber = Math.max(1, Math.floor(+$('#s-next').value || 1));
+    settings.pad = Math.min(12, Math.max(1, Math.floor(+$('#s-pad').value || 1)));
+    settings.defaultVat = numOr($('#s-vat').value, 20);
+    saveSettings();
+    // Keep the manual form on the next number if it was showing the old "next" number.
+    if (manual.invoiceNumber === wasNext) { manual.invoiceNumber = formatInvoiceNo(settings.nextNumber); $('#m-invoiceNumber').value = manual.invoiceNumber; }
+    if (bulk.rows) { bulk.baseN = settings.nextNumber; rebuildOrders(); }
+    updateManual();
+    toast('Settings saved');
+  });
+
+  $('#openTabBtn').addEventListener('click', () => preview.openInTab());
+}
+
+(function init() {
+  if (hasAssets()) $('#brandLogo').src = OP_ASSETS.logoJpeg;
+  const draft = store.get('draft', null);
+  manual = Object.assign(newManualInvoice(), draft && !draft.downloaded ? draft : {});
+  if (!Array.isArray(manual.items) || !manual.items.length) manual.items = [blankItem()];
+  bindChrome();
+  bindManual();
+  bindBulk();
+  loadManualIntoForm();
+  switchTab(store.get('tab', 'manual') === 'bulk' ? 'bulk' : 'manual');
+})();
+</script>
+</body>
+</html>
